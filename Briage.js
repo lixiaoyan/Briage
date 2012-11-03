@@ -168,8 +168,8 @@
     Briage.Loader.State.HAS_BEEN_LOADED=0;
     Briage.Loader.State.JUST_LOADED=1;
     Briage.Loader.loadedImages={};
-    Briage.Loader.loadImage=function(name,url,handle,real,no_cache){
-        if(!no_cache && Briage.Loader.loadedImages[name]){
+    Briage.Loader.loadImage=function(name,url,handle,real,noCache){
+        if(!noCache && Briage.Loader.loadedImages[name]){
             handle.call(Briage.Loader.loadedImages[name],Briage.Loader.loadedImages[name],Briage.Loader.State.FROM_CACHE);
         }else{
             var image=new Image();
@@ -180,7 +180,7 @@
             }
         }
     };
-    Briage.Loader.loadImages=function(images,handle,real,no_cache){
+    Briage.Loader.loadImages=function(images,handle,real,noCache){
         var r={};
         var a=0;
         var c=0;
@@ -197,12 +197,12 @@
                 if(a==c){
                     handle.call(r,r);
                 }
-            },real,no_cache);
+            },real,noCache);
         });
     };
     Briage.Loader.loadedFiles={};
-    Briage.Loader.loadFile=function(name,url,handle,real,no_cache){
-        if(!no_cache && Briage.Loader.loadedFiles[name]){
+    Briage.Loader.loadFile=function(name,url,handle,real,noCache){
+        if(!noCache && Briage.Loader.loadedFiles[name]){
             handle.call(Briage.Loader.loadedFiles[name],Briage.Loader.loadedFiles[name],Briage.Loader.State.FROM_CACHE);
         }else{
             Briage.ajax({
@@ -214,7 +214,7 @@
             });
         }
     };
-    Briage.Loader.loadFiles=function(files,handle,real,no_cache){
+    Briage.Loader.loadFiles=function(files,handle,real,noCache){
         var r={};
         var a=0;
         var c=0;
@@ -231,12 +231,12 @@
                 if(a==c){
                     handle.call(r,r);
                 }
-            },real,no_cache);
+            },real,noCache);
         });
     };
     Briage.Loader.loadedScripts={};
-    Briage.Loader.loadScript=function(name,url,handle,real,no_cache){
-        if(!no_cache && Briage.Loader.loadedScripts[name]){
+    Briage.Loader.loadScript=function(name,url,handle,real,noCache){
+        if(!noCache && Briage.Loader.loadedScripts[name]){
             handle(Briage.Loader.State.FROM_CACHE);
         }else{
             var script=document.createElement("script");
@@ -256,7 +256,7 @@
             };
         }
     };
-    Briage.Loader.loadScripts=function(scripts,handle,real,no_cache){
+    Briage.Loader.loadScripts=function(scripts,handle,real,noCache){
         var a=0;
         var c=0;
         Briage.each(scripts,function(){
@@ -271,11 +271,11 @@
                 if(a==c){
                     handle();
                 }
-            },real,no_cache);
+            },real,noCache);
         });
     };
     Briage.Loader.loadedModules={};
-    Briage.Loader.load_module=function(name,handle){
+    Briage.Loader.loadModule=function(name,handle){
         name=name.replace(/^(?:Briage\.)?(.*?)(?:\.js)?$/,"Briage.$1.js");
         if(Briage.Loader.loadedModules[name]){
             Briage.Loader.loadedModules[name].handles.push(handle);
@@ -297,7 +297,7 @@
             });
         }
     };
-    Briage.Loader.load_modules=function(modules,handle){
+    Briage.Loader.loadModules=function(modules,handle){
         var a=0;
         var c=0;
         Briage.each(modules,function(){
@@ -307,7 +307,7 @@
             handle();
         }
         Briage.each(modules,function(k,v){
-            Briage.Loader.load_module(v,function(){
+            Briage.Loader.loadModule(v,function(){
                 c++;
                 if(a==c){
                     handle();
@@ -319,7 +319,7 @@
         if(typeof modules=="string"){
             modules=[modules];
         }
-        Briage.Loader.load_modules(modules,handle);
+        Briage.Loader.loadModules(modules,handle);
     };
     Briage.add=function(handle,name,include){
         Briage.use(include,function(){
