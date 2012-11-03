@@ -167,20 +167,20 @@
     Briage.Loader.State.FROM_SERVER=1;
     Briage.Loader.State.HAS_BEEN_LOADED=0;
     Briage.Loader.State.JUST_LOADED=1;
-    Briage.Loader.loaded_images={};
-    Briage.Loader.load_image=function(name,url,handle,real,no_cache){
-        if(!no_cache && Briage.Loader.loaded_images[name]){
-            handle.call(Briage.Loader.loaded_images[name],Briage.Loader.loaded_images[name],Briage.Loader.State.FROM_CACHE);
+    Briage.Loader.loadedImages={};
+    Briage.Loader.loadImage=function(name,url,handle,real,no_cache){
+        if(!no_cache && Briage.Loader.loadedImages[name]){
+            handle.call(Briage.Loader.loadedImages[name],Briage.Loader.loadedImages[name],Briage.Loader.State.FROM_CACHE);
         }else{
             var image=new Image();
             image.src=real?url:Briage.path+url;
             image.onload=function(){
-                Briage.Loader.loaded_images[name]=image;
+                Briage.Loader.loadedImages[name]=image;
                 handle.call(image,image,Briage.Loader.State.FROM_SERVER)
             }
         }
     };
-    Briage.Loader.load_images=function(images,handle,real,no_cache){
+    Briage.Loader.loadImages=function(images,handle,real,no_cache){
         var r={};
         var a=0;
         var c=0;
@@ -191,7 +191,7 @@
             handle.call(r,r);
         }
         Briage.each(images,function(k,v){
-            Briage.Loader.load_image(k,v,function(image){
+            Briage.Loader.loadImage(k,v,function(image){
                 r[k]=image;
                 c++;
                 if(a==c){
@@ -200,21 +200,21 @@
             },real,no_cache);
         });
     };
-    Briage.Loader.loaded_files={};
-    Briage.Loader.load_file=function(name,url,handle,real,no_cache){
-        if(!no_cache && Briage.Loader.loaded_files[name]){
-            handle.call(Briage.Loader.loaded_files[name],Briage.Loader.loaded_files[name],Briage.Loader.State.FROM_CACHE);
+    Briage.Loader.loadedFiles={};
+    Briage.Loader.loadFile=function(name,url,handle,real,no_cache){
+        if(!no_cache && Briage.Loader.loadedFiles[name]){
+            handle.call(Briage.Loader.loadedFiles[name],Briage.Loader.loadedFiles[name],Briage.Loader.State.FROM_CACHE);
         }else{
             Briage.ajax({
                 url:(real?url:Briage.path+url),
                 success:function(xhr){
-                    Briage.Loader.loaded_files[name]=xhr.responseText;
+                    Briage.Loader.loadedFiles[name]=xhr.responseText;
                     handle.call(xhr.responseText,xhr.responseText,Briage.Loader.State.FROM_SERVER);
                 }
             });
         }
     };
-    Briage.Loader.load_files=function(files,handle,real,no_cache){
+    Briage.Loader.loadFiles=function(files,handle,real,no_cache){
         var r={};
         var a=0;
         var c=0;
@@ -225,7 +225,7 @@
             handle.call(r,r);
         }
         Briage.each(files,function(k,v){
-            Briage.Loader.load_file(k,v,function(file){
+            Briage.Loader.loadFile(k,v,function(file){
                 r[k]=file;
                 c++;
                 if(a==c){
@@ -234,9 +234,9 @@
             },real,no_cache);
         });
     };
-    Briage.Loader.loaded_scripts={};
-    Briage.Loader.load_script=function(name,url,handle,real,no_cache){
-        if(!no_cache && Briage.Loader.loaded_scripts[name]){
+    Briage.Loader.loadedScripts={};
+    Briage.Loader.loadScript=function(name,url,handle,real,no_cache){
+        if(!no_cache && Briage.Loader.loadedScripts[name]){
             handle(Briage.Loader.State.FROM_CACHE);
         }else{
             var script=document.createElement("script");
@@ -246,17 +246,17 @@
             document.getElementsByTagName("head")[0].appendChild(script);
             script.onreadystatechange=function(){
                 if(script.readyState=="loaded" || script.readyState=="complete"){
-                    Briage.Loader.loaded_scripts[name]=true;
+                    Briage.Loader.loadedScripts[name]=true;
                     handle(Briage.Loader.State.FROM_SERVER);
                 }
             };
             script.onload=function(){
-                Briage.Loader.loaded_scripts[name]=true;
+                Briage.Loader.loadedScripts[name]=true;
                 handle(Briage.Loader.State.FROM_SERVER);
             };
         }
     };
-    Briage.Loader.load_scripts=function(scripts,handle,real,no_cache){
+    Briage.Loader.loadScripts=function(scripts,handle,real,no_cache){
         var a=0;
         var c=0;
         Briage.each(scripts,function(){
@@ -266,7 +266,7 @@
             handle();
         }
         Briage.each(scripts,function(k,v){
-            Briage.Loader.load_script(k,v,function(){
+            Briage.Loader.loadScript(k,v,function(){
                 c++;
                 if(a==c){
                     handle();
@@ -274,25 +274,25 @@
             },real,no_cache);
         });
     };
-    Briage.Loader.loaded_modules={};
+    Briage.Loader.loadedModules={};
     Briage.Loader.load_module=function(name,handle){
         name=name.replace(/^(?:Briage\.)?(.*?)(?:\.js)?$/,"Briage.$1.js");
-        if(Briage.Loader.loaded_modules[name]){
-            Briage.Loader.loaded_modules[name].handles.push(handle);
+        if(Briage.Loader.loadedModules[name]){
+            Briage.Loader.loadedModules[name].handles.push(handle);
         }else{
-            Briage.Loader.loaded_modules[name]={
+            Briage.Loader.loadedModules[name]={
                 onload:function(){
-                    Briage.each(Briage.Loader.loaded_modules[name].handles,function(k,v){
+                    Briage.each(Briage.Loader.loadedModules[name].handles,function(k,v){
                         v();
                     });
-                    delete Briage.Loader.loaded_modules[name];
+                    delete Briage.Loader.loadedModules[name];
                 },
                 handles:[]
             };
-            Briage.Loader.loaded_modules[name].handles.push(handle);
-            Briage.Loader.load_script(name,name,function(state){
+            Briage.Loader.loadedModules[name].handles.push(handle);
+            Briage.Loader.loadScript(name,name,function(state){
                 if(state==Briage.Loader.State.HAS_BEEN_LOADED){
-                    Briage.Loader.loaded_modules[name].onload();
+                    Briage.Loader.loadedModules[name].onload();
                 }
             });
         }
@@ -324,7 +324,7 @@
     Briage.add=function(handle,name,include){
         Briage.use(include,function(){
             handle(Briage);
-            Briage.Loader.loaded_modules[name.replace(/^(?:Briage\.)?(.*?)(?:\.js)?$/,"Briage.$1.js")].onload();
+            Briage.Loader.loadedModules[name.replace(/^(?:Briage\.)?(.*?)(?:\.js)?$/,"Briage.$1.js")].onload();
         });
     };
     window.Briage=window.B=Briage;
