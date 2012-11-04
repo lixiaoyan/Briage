@@ -319,7 +319,7 @@
         if(typeof modules=="string"){
             modules=[modules];
         }
-        Briage.Loader.loadModules(modules,handle);
+        Briage.Loader.loadModules(modules,function(){handle(Briage);});
     };
     Briage.add=function(handle,name,include){
         Briage.use(include,function(){

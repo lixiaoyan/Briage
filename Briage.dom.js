@@ -55,7 +55,7 @@ Briage.add(function(Briage){
             this.setData("Briage-data",{});
         },
         equals:function(other){
-            return other && this.$==other.$;
+            return this.$==other.$;
         }
     };
     Briage.DOM.Event=function($){
@@ -188,6 +188,9 @@ Briage.add(function(Briage){
         },
         removeAttribute:function(name){
             this.$.removeAttribute(name);
+        },
+        appendChild:function(child){
+            this.$.appendChild(child.$);
         }
     },true,true);
     Briage.DOM.Document=function($){
@@ -202,6 +205,15 @@ Briage.add(function(Briage){
         },
         getByTag:function(tag){
             return Briage.DOM.NodeList.parse(this.$.getElementsByTagName(tag));
+        },
+        createElement:function(tag){
+            return Briage.DOM.Node.parse(this.$.createElement(tag));
+        },
+        getBody:function(){
+            return Briage.DOM.Node.parse(this.$.body);
+        },
+        getHead:function(){
+            return this.getByTag("head").item(0);
         }
     },true,true);
     Briage.DOM.Text=function($){
