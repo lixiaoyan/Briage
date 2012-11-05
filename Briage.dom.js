@@ -1,231 +1,249 @@
-Briage.add(function(Briage){
-    Briage.DOM={};
-    Briage.DOM.NodeType={};
-    Briage.DOM.NodeType.ELEMENT=1;
-    Briage.DOM.NodeType.DOCUMENT=9;
-    Briage.DOM.NodeType.TEXT=3;
-    Briage.DOM.NodeType.COMMENT=8;
-    Briage.DOM.Object=function($){
+Briage().add(function(B){
+    B.DOM={};
+    B.DOM.NodeType={};
+    B.DOM.NodeType.ELEMENT=1;
+    B.DOM.NodeType.DOCUMENT=9;
+    B.DOM.NodeType.TEXT=3;
+    B.DOM.NodeType.COMMENT=8;
+    B.DOM.Object=new B.Class(function($){
         if($){
             this.$=$;
         }
-    };
-    Briage.DOM.Object.parse=function($){
-        if($){
-            if($.$){
-                if($ instanceof this){
-                    return $;
+    },{
+        method:{
+            parse:function($){
+                if($){
+                    if($.$){
+                        if($ instanceof this){
+                            return $;
+                        }else{
+                            return new this($.$);
+                        }
+                    }else{
+                        return new this($);
+                    }
                 }else{
-                    return new this($.$);
+                    return null;
                 }
-            }else{
-                return new this($);
-            }
-        }else{
-            return null;
-        }
-    };
-    Briage.DOM.Object.prototype={
-        constructor:Briage.DOM.Object,
-        getData:function(name){
-            return this.$[name];
-        },
-        setData:function(name,data){
-            this.$[name]=data;
-        },
-        getCustomData:function(name){
-            if(this.getData("Briage-data")){
-                return this.getData("Briage-data")[name];
-            }else{
-                return null;
             }
         },
-        setCustomData:function(name,data){
-            if(!this.getData("Briage-data")){
+        prototype:{
+            getData:function(name){
+                return this.$[name];
+            },
+            setData:function(name,data){
+                this.$[name]=data;
+            },
+            getCustomData:function(name){
+                if(this.getData("Briage-data")){
+                    return this.getData("Briage-data")[name];
+                }else{
+                    return null;
+                }
+            },
+            setCustomData:function(name,data){
+                if(!this.getData("Briage-data")){
+                    this.setData("Briage-data",{});
+                }
+                this.getData("Briage-data")[name]=data;
+            },
+            removeCustomData:function(name){
+                if(this.getData("Briage-data")){
+                    delete this.getData("Briage-data")[name];
+                }
+            },
+            removeAllCustomData:function(){
                 this.setData("Briage-data",{});
-            }
-            this.getData("Briage-data")[name]=data;
-        },
-        removeCustomData:function(name){
-            if(this.getData("Briage-data")){
-                delete this.getData("Briage-data")[name];
-            }
-        },
-        removeAllCustomData:function(){
-            this.setData("Briage-data",{});
-        },
-        equals:function(other){
-            return this.$==other.$;
-        }
-    };
-    Briage.DOM.Event=function($){
-        return Briage.DOM.Object.call(this,$);
-    };
-    Briage.DOM.Event.parse=Briage.DOM.Object.parse;
-    Briage.DOM.Event.prototype=new Briage.DOM.Object();
-    Briage.extend(Briage.DOM.Event.prototype,{
-        constructor:Briage.DOM.Event,
-        returnValue:true,
-        cancelBubble:false,
-        preventDefault:function(stopPropagation){
-            this.returnValue=false;
-            if(this.$.preventDefault){
-                this.$.preventDefault();
-            }else{
-                this.$.returnValue=false;
-            }
-            if(stopPropagation){
-                this.stopPropagation()
-            }
-        },
-        stopPropagation:function(){
-            this.cancelBubble=true;
-            if(this.$.stopPropagation){
-                this.$.stopPropagation();
-            }else{
-                this.$.cancelBubble=true;
+            },
+            equals:function(other){
+                return this.$==other.$;
             }
         }
-    },true,true);
-    Briage.DOM.DOM=function($){
-        return Briage.DOM.Object.call(this,$);
-    };
-    Briage.DOM.DOM.parse=Briage.DOM.Object.parse;
-    Briage.DOM.DOM.prototype=new Briage.DOM.Object();
-    Briage.extend(Briage.DOM.DOM.prototype,{
-        constructor:Briage.DOM.DOM,
-        addEventListener:function(type,handle){
-            Briage.Event.addEventListener(this,type,handle);
-        },
-        removeEventListener:function(type,handle){
-            Briage.Event.removeEventListener(this,type,handle);
-        },
-        removeAllEventListener:function(type){
-            Briage.Event.removeAllEventListener(this,type);
-        },
-        dispatchEvent:function(type){
-            Briage.Event.dispatchEvent(this,type);
+    });
+    B.DOM.Event=new B.Class(function(){},{
+        extend:B.DOM.Object,
+        prototype:{
+            returnValue:true,
+            cancelBubble:false,
+            preventDefault:function(stopPropagation){
+                this.returnValue=false;
+                if(this.$.preventDefault){
+                    this.$.preventDefault();
+                }else{
+                    this.$.returnValue=false;
+                }
+                if(stopPropagation){
+                    this.stopPropagation()
+                }
+            },
+            stopPropagation:function(){
+                this.cancelBubble=true;
+                if(this.$.stopPropagation){
+                    this.$.stopPropagation();
+                }else{
+                    this.$.cancelBubble=true;
+                }
+            }
         }
-    },true,true);
-    Briage.DOM.Window=function($){
-        return Briage.DOM.Object.call(this,$);
-    };
-    Briage.DOM.Window.parse=Briage.DOM.Object.parse;
-    Briage.DOM.Window.prototype=new Briage.DOM.DOM();
-    Briage.extend(Briage.DOM.Window.prototype,{
-        constructor:Briage.DOM.Window,
-        getDocument:function(){
-            return Briage.DOM.Node.parse(this.$.document);
+    });
+    B.DOM.DOM=new B.Class(function(){},{
+        extend:B.DOM.Object,
+        prototype:{
+            bind:function(type,handle){
+                B.Event.bind(this,type,handle);
+            },
+            unbind:function(type,handle){
+                B.Event.unbind(this,type,handle);
+            },
+            unbindAll:function(type){
+                B.Event.unbindAll(this,type);
+            },
+            fire:function(type){
+                B.Event.fire(this,type);
+            }
         }
-    },true,true);
-    Briage.DOM.Node=function($){
+    });
+    B.DOM.Window=new B.Class(function(){},{
+        extend:{
+            constructor:B.DOM.Object,
+            prototype:B.DOM.DOM
+        },
+        prototype:{
+            getDocument:function(){
+                return B.DOM.Node.parse(this.$.document);
+            }
+        }
+    });
+    B.DOM.Node=new B.Class(function($){
         if(!$){
             return this;
         }
         switch($.nodeType){
-            case Briage.DOM.NodeType.ELEMENT:
-                return Briage.DOM.Element.parse($);
-            case Briage.DOM.NodeType.DOCUMENT:
-                return Briage.DOM.Document.parse($);
-            case Briage.DOM.NodeType.TEXT:
-                return Briage.DOM.Text.parse($);
-            case Briage.DOM.NodeType.COMMENT:
-                return Briage.DOM.Comment.parse($);
+            case B.DOM.NodeType.ELEMENT:
+                return B.DOM.Element.parse($);
+            case B.DOM.NodeType.DOCUMENT:
+                return B.DOM.Document.parse($);
+            case B.DOM.NodeType.TEXT:
+                return B.DOM.Text.parse($);
+            case B.DOM.NodeType.COMMENT:
+                return B.DOM.Comment.parse($);
             default:
-                return Briage.DOM.DOM.parse($);
+                return B.DOM.DOM.parse($);
         }
-    };
-    Briage.DOM.Node.parse=Briage.DOM.Object.parse;
-    Briage.DOM.Node.prototype=new Briage.DOM.DOM();
-    Briage.extend(Briage.DOM.Node.prototype,{
-        constructor:Briage.DOM.Node,
-        getParent:function(){
-            return Briage.DOM.Node.parse(this.$.parentNode);
+    },{
+        extend:{
+            prototype:B.DOM.DOM
         },
-        getDocument:function(){
-            return Briage.DOM.Node.parse(this.$.ownerDocument);
+        method:{
+            parse:B.DOM.Object.parse
+        },
+        prototype:{
+            getParent:function(){
+                return B.DOM.Node.parse(this.$.parentNode);
+            },
+            getDocument:function(){
+                return B.DOM.Node.parse(this.$.ownerDocument);
+            }
         }
-    },true,true);
-    Briage.DOM.NodeList=function($){
-        if(!(Object.prototype.toString.call($)=="[object Array]" || $.item)){
+    });
+    B.DOM.NodeList=new B.Class(function($){
+        if(!(B.toString.call($)=="[object Array]" || $.item)){
             $=[$];
         }
         var t=this.$=[];
-        Briage.each($,function(k,v){
+        B.each($,function(k,v){
             if(!isNaN(k)){
-                var c=Briage.DOM.Node.parse(v);
+                var c=B.DOM.Node.parse(v);
                 if(c){
                     t.push(c);
                 } 
             }
         });
-    };
-    Briage.DOM.NodeList.parse=Briage.DOM.Object.parse;
-    Briage.DOM.NodeList.prototype={
-        constructor:Briage.DOM.NodeList,
-        size:function(){
-            return this.$.length;
+    },{
+        method:{
+            parse:B.DOM.Object.parse
         },
-        item:function(index){
-            return this.$[index];
-        },
-        each:function(handle){
-            Briage.each(this.$,handle);
+        prototype:{
+            size:function(){
+                return this.$.length;
+            },
+            item:function(index){
+                return this.$[index];
+            },
+            each:function(handle){
+                B.each(this.$,handle);
+            }
         }
-    };
-    Briage.DOM.Element=function($){
-        return Briage.DOM.Object.call(this,$);
-    };
-    Briage.DOM.Element.parse=Briage.DOM.Object.parse;
-    Briage.DOM.Element.prototype=new Briage.DOM.Node();
-    Briage.extend(Briage.DOM.Element.prototype,{
-        constructor:Briage.DOM.Element,
-        getAttribute:function(name){
-            return this.$.getAttribute(name);
+    });
+    B.DOM.Element=new B.Class(function(){},{
+        extend:{
+            constructor:B.DOM.Object,
+            prototype:B.DOM.Node
         },
-        setAttribute:function(name,value){
-            this.$.setAttribute(name,value);
-        },
-        removeAttribute:function(name){
-            this.$.removeAttribute(name);
-        },
-        appendChild:function(child){
-            this.$.appendChild(child.$);
+        prototype:{
+            getAttr:function(name){
+                return this.$.getAttribute(name);
+            },
+            setAttr:function(name,value){
+                this.$.setAttribute(name,value);
+            },
+            removeAttr:function(name){
+                this.$.removeAttribute(name);
+            },
+            append:function(child){
+                this.$.appendChild(child.$);
+            },
+            getHTML:function(){
+                return this.getAttr("innerHTML");
+            },
+            setHTML:function(html){
+                this.setAttr("innerHTML",html);
+            },
+            load:function(url,handle,real,noCache){
+                var self=this;
+                handle=B.getHandle(handle);
+                B.Loader.loadFile(url,url,function(html){
+                    self.setHTML(html);
+                    handle();
+                },real,noCache);
+            }
         }
-    },true,true);
-    Briage.DOM.Document=function($){
-        return Briage.DOM.Object.call(this,$);
-    };
-    Briage.DOM.Document.parse=Briage.DOM.Object.parse;
-    Briage.DOM.Document.prototype=new Briage.DOM.Node();
-    Briage.extend(Briage.DOM.Document.prototype,{
-        constructor:Briage.DOM.Document,
-        getById:function(id){
-            return Briage.DOM.Node.parse(this.$.getElementById(id));
+    });
+    B.DOM.Document=new B.Class(function(){},{
+        extend:{
+            constructor:B.DOM.Object,
+            prototype:B.DOM.Node
         },
-        getByTag:function(tag){
-            return Briage.DOM.NodeList.parse(this.$.getElementsByTagName(tag));
-        },
-        createElement:function(tag){
-            return Briage.DOM.Node.parse(this.$.createElement(tag));
-        },
-        getBody:function(){
-            return Briage.DOM.Node.parse(this.$.body);
-        },
-        getHead:function(){
-            return this.getByTag("head").item(0);
+        prototype:{
+            getById:function(id){
+                return B.DOM.Node.parse(this.$.getElementById(id));
+            },
+            getByTag:function(tag){
+                return B.DOM.NodeList.parse(this.$.getElementsByTagName(tag));
+            },
+            create:function(tag){
+                return B.DOM.Node.parse(this.$.createElement(tag));
+            },
+            getBody:function(){
+                return B.DOM.Node.parse(this.$.body);
+            },
+            getHead:function(){
+                return this.getByTag("head").item(0);
+            }
         }
-    },true,true);
-    Briage.DOM.Text=function($){
-        return Briage.DOM.Object.call(this,$);
-    };
-    Briage.DOM.Text.parse=Briage.DOM.Object.parse;
-    Briage.DOM.Text.prototype=new Briage.DOM.Node();
-    Briage.DOM.Comment=function($){
-        return Briage.DOM.Object.call(this,$);
-    };
-    Briage.DOM.Comment.parse=Briage.DOM.Object.parse;
-    Briage.DOM.Comment.prototype=new Briage.DOM.Node();
-    Briage.window=Briage.DOM.Window.parse(window);
-    Briage.document=Briage.DOM.Node.parse(document);
+    });
+    B.DOM.Text=new B.Class(function(){},{
+        extend:{
+            constructor:B.DOM.Object,
+            prototype:B.DOM.Node
+        }
+    });
+    B.DOM.Comment=new B.Class(function(){},{
+        extend:{
+            constructor:B.DOM.Object,
+            prototype:B.DOM.Node
+        }
+    });
+    B.window=B.DOM.Window.parse(window);
+    B.document=B.DOM.Node.parse(document);
 },"dom",["event"]);

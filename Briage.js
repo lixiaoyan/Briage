@@ -1,22 +1,26 @@
 (function(window){
-    var Briage={};
-    Briage.Break=function(){};
-    Briage.Continue=function(){};
-    Briage.error=function(msg){
+    var B={};
+    B.toString=Object.prototype.toString;
+    B.getHandle=function(handle){
+        return handle || function(){};
+    };
+    B.Break=function(){};
+    B.Continue=function(){};
+    B.error=function(msg){
         throw msg;
     };
-    Briage.each=function(object,handle,prototype){
-        if(Object.prototype.toString.call(object)=="[object Array]"){
+    B.each=function(object,handle,prototype){
+        if(B.toString.call(object)=="[object Array]"){
             for(var key=0;key<object.length;key++){
                 try{
                     handle.call(object[key],key,object[key]);
                 }catch(e){
-                    if(e instanceof Briage.Break){
+                    if(e instanceof B.Break){
                         break;
-                    }else if(e instanceof Briage.Continue){
+                    }else if(e instanceof B.Continue){
                         continue;
                     }else{
-                        Briage.error(e);
+                        B.error(e);
                     }
                 }
             }
@@ -26,29 +30,23 @@
                     try{
                         handle.call(object[key],key,object[key]);
                     }catch(e){
-                        if(e instanceof Briage.Break){
+                        if(e instanceof B.Break){
                             break;
-                        }else if(e instanceof Briage.Continue){
+                        }else if(e instanceof B.Continue){
                             continue;
                         }else{
-                            Briage.error(e);
+                            B.error(e);
                         }
                     }
                 }
             }
         }
     };
-    Briage.extend=function(receiver,supplier,deepclone,overwrite,prototype){
-        Briage.each(supplier,function(k,v){
+    B.extend=function(receiver,supplier,deepclone,overwrite,prototype){
+        B.each(supplier,function(k,v){
             if(overwrite || !(k in receiver)){
                 if(deepclone){
-                    if(Object.prototype.toString.call(v)=="[object Object]"){
-                        receiver[k]=Briage.extend({},v,deepclone,overwrite,prototype);
-                    }else if(Object.prototype.toString.call(v)=="[object Array]"){
-                        receiver[k]=Briage.extend([],v,deepclone,overwrite,prototype);
-                    }else{
-                        receiver[k]=v;
-                    }
+                    receiver[k]=B.deepclone(v,prototype);
                 }else{
                     receiver[k]=v;
                 }
@@ -56,18 +54,81 @@
         });
         return receiver;
     };
-    Briage.param=function(param){
+    B.deepclone=function(object,prototype){
+        if(B.toString.call(object)=="[object Object]"){
+            return B.extend({},object,true,true,prototype);
+        }else if(B.toString.call(object)=="[object Array]"){
+            return B.extend([],object,true,true,prototype);
+        }else{
+            return object;
+        }
+    };
+    B.Class=function(constructor,config){
+        constructor=constructor || function(){};
+        config=config || {};
+        var subClass;
+        if(config.extend){
+            if(B.toString.call(config.extend)=="[object Object]"){
+                if(config.extend.prototype || config.extend.constructor){
+                    if(config.extend.constructor){
+                        subClass=function(){
+                            config.extend.constructor.apply(this,arguments);
+                            constructor.call(this,arguments);
+                        };
+                        B.extend(subClass,config.extend.constructor,true,true);
+                    }else{
+                        subClass=function(){
+                            constructor.call(this,arguments);
+                        };
+                    }
+                    if(config.extend.prototype){
+                        if(B.toString.call(config.extend.prototype)=="[object Object]"){
+                            var tempClass=function(){};
+                            tempClass.prototype=config.extend.prototype;
+                            subClass.prototype=new tempClass();
+                        }else{
+                            subClass.prototype=new config.extend.prototype();
+                        }
+                    }
+                }else{
+                    subClass=function(){
+                        constructor.apply(this,arguments);
+                    };
+                }
+            }else{
+                subClass=function(){
+                    config.extend.apply(this,arguments);
+                    constructor.apply(this,arguments);
+                };
+                B.extend(subClass,config.extend,true,true);
+                subClass.prototype=new config.extend();
+            }
+        }else{
+            subClass=function(){
+                constructor.apply(this,arguments);
+            };
+        }
+        subClass.prototype.constructor=subClass;
+        if(config.method){
+            B.extend(subClass,config.method,true,true);
+        }
+        if(config.prototype){
+            B.extend(subClass.prototype,config.prototype,true,true);
+        }
+        return subClass;
+    };
+    B.param=function(param){
         if(typeof param=="string"){
             return param;
         }
         var arr=[];
-        Briage.each(param,function(key,value){
+        B.each(param,function(key,value){
             arr.push(encodeURIComponent(key)+"="+encodeURIComponent(value));
         });
         return arr.join("&");
     };
-    Briage.ajax=function(config){
-        config=Briage.extend({
+    B.ajax=function(config){
+        config=B.extend({
             xhr:window.XMLHttpRequest?new window.XMLHttpRequest():new window.ActiveXObject("Microsoft.XMLHTTP"),
             type:"GET",
             url:window.location.href,
@@ -78,7 +139,7 @@
             error:function(){}
         },config,true,true);
         config.type=config.type.toUpperCase();
-        config.data=Briage.param(config.data);
+        config.data=B.param(config.data);
         if(config.data && config.type==="GET"){
             config.url+=(/\?/.test(config.url)?"&":"?")+config.data;
         }
@@ -97,39 +158,39 @@
         };
         return config.xhr;
     };
-    Briage.Array={};
-    Briage.Array.indexOf=function(arr,value){
+    B.Array={};
+    B.Array.indexOf=function(arr,value){
         var result=-1;
-        Briage.each(arr,function(k,v){
+        B.each(arr,function(k,v){
             if(v===value){
                 result=k;
-                throw new Briage.Break();
+                throw new B.Break();
             }
         });
         return result;
     };
-    Briage.Array.remove=function(arr,value){
-        if(Briage.array.indexOf(arr,value)!=-1){
-            arr.splice(Briage.array.indexOf(arr,value),1);
+    B.Array.remove=function(arr,value){
+        if(B.array.indexOf(arr,value)!=-1){
+            arr.splice(B.array.indexOf(arr,value),1);
         }
     };
-    Briage.String={};
-    Briage.String.format=function(str){
-        Briage.each(Array.prototype.slice.call(arguments,1),function(k,v){
+    B.String={};
+    B.String.format=function(str){
+        B.each(Array.prototype.slice.call(arguments,1),function(k,v){
             str=str.replace(new RegExp("\\{"+k+"\\}","g"),v);
         });
         return str;
     };
-    Briage.String.trim=function(str){
-        return Briage.String.trimLeft(Briage.String.trimRight(str));
+    B.String.trim=function(str){
+        return B.String.trimLeft(B.String.trimRight(str));
     };
-    Briage.String.trimLeft=function(str){
+    B.String.trimLeft=function(str){
         return str.replace(/^\s+/,"");
     };
-    Briage.String.trimRight=function(str){
+    B.String.trimRight=function(str){
         return str.replace(/\s+$/,"");
     };
-    Briage.String.replace=function(arr,a,b){
+    B.String.replace=function(arr,a,b){
         if(typeof arr=="string"){
             if(typeof a=="function"){
                 return a.call(arr);
@@ -138,60 +199,62 @@
             }
         }else{
             var r;
-            if(Object.prototype.toString.call(arr)=="[object Array]"){
+            if(B.toString.call(arr)=="[object Array]"){
                 r=[];
             }else{
                 r={};
             }
-            Briage.each(arr,function(k,v){
-                r[k]=Briage.String.replace(v,a,b);
+            B.each(arr,function(k,v){
+                r[k]=B.String.replace(v,a,b);
             });
             return r;
         }
     };
-    (function(Briage){
+    (function(B){
         var path="";
         var scripts=document.getElementsByTagName("script");
-        Briage.each(scripts,function(k,v){
+        B.each(scripts,function(k,v){
             var src=v.src;
             if(/Briage\.js$/.test(src)){
                 path=src.replace(/Briage\.js$/,"");
-                throw new Briage.Break();
+                throw new B.Break();
             }
         });
-        Briage.path=path;
-    })(Briage);
-    Briage.Loader={};
-    Briage.Loader.State={};
-    Briage.Loader.State.FROM_CACHE=0;
-    Briage.Loader.State.FROM_SERVER=1;
-    Briage.Loader.State.HAS_BEEN_LOADED=0;
-    Briage.Loader.State.JUST_LOADED=1;
-    Briage.Loader.loadedImages={};
-    Briage.Loader.loadImage=function(name,url,handle,real,noCache){
-        if(!noCache && Briage.Loader.loadedImages[name]){
-            handle.call(Briage.Loader.loadedImages[name],Briage.Loader.loadedImages[name],Briage.Loader.State.FROM_CACHE);
+        B.path=path;
+    })(B);
+    B.Loader={};
+    B.Loader.State={};
+    B.Loader.State.FROM_CACHE=0;
+    B.Loader.State.FROM_SERVER=1;
+    B.Loader.State.HAS_BEEN_LOADED=0;
+    B.Loader.State.JUST_LOADED=1;
+    var loadedImages={};
+    B.Loader.loadImage=function(name,url,handle,real,noCache){
+        handle=B.getHandle(handle);
+        if(!noCache && loadedImages[name]){
+            handle.call(loadedImages[name],loadedImages[name],B.Loader.State.FROM_CACHE);
         }else{
             var image=new Image();
-            image.src=real?url:Briage.path+url;
+            image.src=real?url:B.path+url;
             image.onload=function(){
-                Briage.Loader.loadedImages[name]=image;
-                handle.call(image,image,Briage.Loader.State.FROM_SERVER)
+                loadedImages[name]=image;
+                handle.call(image,image,B.Loader.State.FROM_SERVER)
             }
         }
     };
-    Briage.Loader.loadImages=function(images,handle,real,noCache){
+    B.Loader.loadImages=function(images,handle,real,noCache){
+        handle=B.getHandle(handle);
         var r={};
         var a=0;
         var c=0;
-        Briage.each(images,function(){
+        B.each(images,function(){
             a++;
         });
         if(a==0){
             handle.call(r,r);
         }
-        Briage.each(images,function(k,v){
-            Briage.Loader.loadImage(k,v,function(image){
+        B.each(images,function(k,v){
+            B.Loader.loadImage(k,v,function(image){
                 r[k]=image;
                 c++;
                 if(a==c){
@@ -200,32 +263,34 @@
             },real,noCache);
         });
     };
-    Briage.Loader.loadedFiles={};
-    Briage.Loader.loadFile=function(name,url,handle,real,noCache){
-        if(!noCache && Briage.Loader.loadedFiles[name]){
-            handle.call(Briage.Loader.loadedFiles[name],Briage.Loader.loadedFiles[name],Briage.Loader.State.FROM_CACHE);
+    var loadedFiles={};
+    B.Loader.loadFile=function(name,url,handle,real,noCache){
+        handle=B.getHandle(handle);
+        if(!noCache && loadedFiles[name]){
+            handle.call(loadedFiles[name],loadedFiles[name],B.Loader.State.FROM_CACHE);
         }else{
-            Briage.ajax({
-                url:(real?url:Briage.path+url),
+            B.ajax({
+                url:(real?url:B.path+url),
                 success:function(xhr){
-                    Briage.Loader.loadedFiles[name]=xhr.responseText;
-                    handle.call(xhr.responseText,xhr.responseText,Briage.Loader.State.FROM_SERVER);
+                    loadedFiles[name]=xhr.responseText;
+                    handle.call(xhr.responseText,xhr.responseText,B.Loader.State.FROM_SERVER);
                 }
             });
         }
     };
-    Briage.Loader.loadFiles=function(files,handle,real,noCache){
+    B.Loader.loadFiles=function(files,handle,real,noCache){
+        handle=B.getHandle(handle);
         var r={};
         var a=0;
         var c=0;
-        Briage.each(files,function(){
+        B.each(files,function(){
             a++;
         });
         if(a==0){
             handle.call(r,r);
         }
-        Briage.each(files,function(k,v){
-            Briage.Loader.loadFile(k,v,function(file){
+        B.each(files,function(k,v){
+            B.Loader.loadFile(k,v,function(file){
                 r[k]=file;
                 c++;
                 if(a==c){
@@ -234,39 +299,41 @@
             },real,noCache);
         });
     };
-    Briage.Loader.loadedScripts={};
-    Briage.Loader.loadScript=function(name,url,handle,real,noCache){
-        if(!noCache && Briage.Loader.loadedScripts[name]){
-            handle(Briage.Loader.State.FROM_CACHE);
+    var loadedScripts={};
+    B.Loader.loadScript=function(name,url,handle,real,noCache){
+        handle=B.getHandle(handle);
+        if(!noCache && loadedScripts[name]){
+            handle(B.Loader.State.FROM_CACHE);
         }else{
             var script=document.createElement("script");
             script.async=true;
             script.type="text/javascript";
-            script.src=real?url:Briage.path+url;
+            script.src=real?url:B.path+url;
             document.getElementsByTagName("head")[0].appendChild(script);
             script.onreadystatechange=function(){
                 if(script.readyState=="loaded" || script.readyState=="complete"){
-                    Briage.Loader.loadedScripts[name]=true;
-                    handle(Briage.Loader.State.FROM_SERVER);
+                    loadedScripts[name]=true;
+                    handle(B.Loader.State.FROM_SERVER);
                 }
             };
             script.onload=function(){
-                Briage.Loader.loadedScripts[name]=true;
-                handle(Briage.Loader.State.FROM_SERVER);
+                loadedScripts[name]=true;
+                handle(B.Loader.State.FROM_SERVER);
             };
         }
     };
-    Briage.Loader.loadScripts=function(scripts,handle,real,noCache){
+    B.Loader.loadScripts=function(scripts,handle,real,noCache){
+        handle=B.getHandle(handle);
         var a=0;
         var c=0;
-        Briage.each(scripts,function(){
+        B.each(scripts,function(){
             a++;
         });
         if(a==0){
             handle();
         }
-        Briage.each(scripts,function(k,v){
-            Briage.Loader.loadScript(k,v,function(){
+        B.each(scripts,function(k,v){
+            B.Loader.loadScript(k,v,function(){
                 c++;
                 if(a==c){
                     handle();
@@ -274,40 +341,42 @@
             },real,noCache);
         });
     };
-    Briage.Loader.loadedModules={};
-    Briage.Loader.loadModule=function(name,handle){
+    var loadedModules={};
+    B.Loader.loadModule=function(name,handle){
+        handle=B.getHandle(handle);
         name=name.replace(/^(?:Briage\.)?(.*?)(?:\.js)?$/,"Briage.$1.js");
-        if(Briage.Loader.loadedModules[name]){
-            Briage.Loader.loadedModules[name].handles.push(handle);
+        if(loadedModules[name]){
+            loadedModules[name].handles.push(handle);
         }else{
-            Briage.Loader.loadedModules[name]={
+            loadedModules[name]={
                 onload:function(){
-                    Briage.each(Briage.Loader.loadedModules[name].handles,function(k,v){
+                    B.each(loadedModules[name].handles,function(k,v){
                         v();
                     });
-                    delete Briage.Loader.loadedModules[name];
+                    delete loadedModules[name];
                 },
                 handles:[]
             };
-            Briage.Loader.loadedModules[name].handles.push(handle);
-            Briage.Loader.loadScript(name,name,function(state){
-                if(state==Briage.Loader.State.HAS_BEEN_LOADED){
-                    Briage.Loader.loadedModules[name].onload();
+            loadedModules[name].handles.push(handle);
+            B.Loader.loadScript(name,name,function(state){
+                if(state==B.Loader.State.HAS_BEEN_LOADED){
+                    loadedModules[name].onload();
                 }
             });
         }
     };
-    Briage.Loader.loadModules=function(modules,handle){
+    B.Loader.loadModules=function(modules,handle){
+        handle=B.getHandle(handle);
         var a=0;
         var c=0;
-        Briage.each(modules,function(){
+        B.each(modules,function(){
             a++;
         });
         if(a==0){
             handle();
         }
-        Briage.each(modules,function(k,v){
-            Briage.Loader.loadModule(v,function(){
+        B.each(modules,function(k,v){
+            B.Loader.loadModule(v,function(){
                 c++;
                 if(a==c){
                     handle();
@@ -315,17 +384,38 @@
             });
         });
     };
-    Briage.use=function(modules,handle){
-        if(typeof modules=="string"){
-            modules=[modules];
+
+    var Briage=function(){
+        return new Briage.Briage();
+    };
+    Briage.Briage=new B.Class(function(){
+
+    },{
+        prototype:{
+            use:function(){
+                var length=arguments.length;
+                if(!length){
+                    return;
+                }
+                var modules;
+                if(B.toString.call(arguments[0])=="[object Array]"){
+                    modules=arguments[0];
+                }else{
+                    modules=Array.prototype.slice.call(arguments,0,-1);
+                }
+                var handle=B.getHandle(arguments[length-1]);
+                B.Loader.loadModules(modules,function(){handle(B.deepclone(B));});
+            },
+            add:function(handle,name,include){
+                name=name.replace(/^(?:Briage\.)?(.*?)(?:\.js)?$/,"Briage.$1.js");
+                this.use(include,function(){
+                    handle(B);
+                    if(loadedModules[name]){
+                        loadedModules[name].onload();
+                    }
+                });
+            }
         }
-        Briage.Loader.loadModules(modules,function(){handle(Briage);});
-    };
-    Briage.add=function(handle,name,include){
-        Briage.use(include,function(){
-            handle(Briage);
-            Briage.Loader.loadedModules[name.replace(/^(?:Briage\.)?(.*?)(?:\.js)?$/,"Briage.$1.js")].onload();
-        });
-    };
-    window.Briage=window.B=Briage;
+    });
+    window.Briage=Briage;
 })(window);
