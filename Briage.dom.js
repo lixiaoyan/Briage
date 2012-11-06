@@ -187,6 +187,18 @@ Briage().add(function(B){
             setAttr:function(name,value){
                 this.$.setAttribute(name,value);
             },
+            getId:function(){
+                return this.getAttr("id");
+            },
+            setId:function(id){
+                this.setAttr("id",id);
+            },
+            getStyle:function(name){
+                return this.getData("style")[name];
+            },
+            setStyle:function(name,value){
+                this.getData("style")[name]=value;
+            },
             removeAttr:function(name){
                 this.$.removeAttribute(name);
             },

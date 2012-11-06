@@ -10,11 +10,11 @@ Briage().add(function(B){
     var addEventListener=(function(){
         if(window.addEventListener){
             return function(dom,type,handle){
-                dom.addEventListener(getType(type),function(e){handle.call(dom,e);});
+                dom.addEventListener(getType(type,true),function(e){handle.call(dom,e);});
             };
         }else if(window.attachEvent){
             return function(dom,type,handle){
-                dom.attachEvent(getType(type,true),function(e){handle.call(dom,e);});
+                dom.attachEvent(getType(type),function(e){handle.call(dom,e);});
             };
         }else{
             return function(dom,type,handle){
@@ -32,6 +32,11 @@ Briage().add(function(B){
             e[type]=[];
         }
         if(!dom.getCustomData("listener")){
+            dom.setCustomData("listener",{});
+        }
+        var l=dom.getCustomData("listener");
+        if(!l[type]){
+            console.log("aa");
             var listener=function(event){
                 event=B.DOM.Event.parse(event || window.event);
                 var dom=B.DOM.Node.parse(this);
@@ -49,7 +54,7 @@ Briage().add(function(B){
                 }
                 return event.returnValue;
             };
-            dom.setCustomData("listener",listener);
+            l[type]=listener;
             addEventListener(dom.$,type,listener);
         }
         e[type].push(handle);
@@ -68,8 +73,12 @@ Briage().add(function(B){
     };
     B.Event.fire=function(dom,type){
         type=getType(type);
-        if(dom.getCustomData("listener")){
-            dom.getCustomData("listener").call(dom,{});
+        var event=B.DOM.Event.parse({});
+        if(dom.getCustomData("listener") && dom.getCustomData("listener")[type]){
+            dom.getCustomData("listener")[type].call(dom,event);
+        }
+        if(!event.cancelBubble && dom.getParent && dom.getParent()){
+            dom.getParent().fire(type);
         }
     };
-},"event",[]);
+},"event",["dom"]);

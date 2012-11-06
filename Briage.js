@@ -4,6 +4,11 @@
     B.getHandle=function(handle){
         return handle || function(){};
     };
+    B.assert=function(bool,msg){
+        if(!bool){
+            B.error(msg);
+        }
+    };
     B.Break=function(){};
     B.Continue=function(){};
     B.error=function(msg){
@@ -46,22 +51,46 @@
         B.each(supplier,function(k,v){
             if(overwrite || !(k in receiver)){
                 if(deepclone){
-                    receiver[k]=B.deepclone(v,prototype);
+                    if(B.toString.call(v)=="[object Object]"){
+                        receiver[k]=B.extend({},v,deepclone,overwrite,prototype);
+                    }else if(B.toString.call(v)=="[object Array]"){
+                        receiver[k]=B.extend([],v,deepclone,overwrite,prototype);
+                    }else{
+                        receiver[k]=v;
+                    }
                 }else{
                     receiver[k]=v;
                 }
             }
-        });
+        },prototype);
         return receiver;
     };
     B.deepclone=function(object,prototype){
-        if(B.toString.call(object)=="[object Object]"){
-            return B.extend({},object,true,true,prototype);
-        }else if(B.toString.call(object)=="[object Array]"){
-            return B.extend([],object,true,true,prototype);
-        }else{
-            return object;
+        if(!object){
+            return null;
         }
+        var clone;
+        if(B.toString.call(object)=="[object Object]" || B.toString.call(object)=="[object Array]"){
+            if(prototype && object.constructor){
+                clone=new object.constructor();
+                B.each(object,function(k,v){
+                    clone[k]=B.deepclone(v,prototype);
+                },false);
+            }else{
+                if(B.toString.call(object)=="[object Object]"){
+                    clone={};
+                }
+                if(B.toString.call(object)=="[object Array]"){
+                    clone=[];
+                }
+                B.each(object,function(k,v){
+                    clone[k]=B.deepclone(v,prototype);
+                },prototype);
+            }
+        }else{
+            clone=object;
+        }
+        return clone;
     };
     B.Class=function(constructor,config){
         constructor=constructor || function(){};
@@ -73,12 +102,18 @@
                     if(config.extend.constructor){
                         subClass=function(){
                             config.extend.constructor.apply(this,arguments);
-                            constructor.call(this,arguments);
+                            var r=constructor.apply(this,arguments);
+                            if(r!==undefined){
+                                return r;
+                            }
                         };
                         B.extend(subClass,config.extend.constructor,true,true);
                     }else{
                         subClass=function(){
-                            constructor.call(this,arguments);
+                            var r=constructor.apply(this,arguments);
+                            if(r!==undefined){
+                                return r;
+                            }
                         };
                     }
                     if(config.extend.prototype){
@@ -92,20 +127,29 @@
                     }
                 }else{
                     subClass=function(){
-                        constructor.apply(this,arguments);
+                        var r=constructor.apply(this,arguments);
+                        if(r!==undefined){
+                            return r;
+                        }
                     };
                 }
             }else{
                 subClass=function(){
                     config.extend.apply(this,arguments);
-                    constructor.apply(this,arguments);
+                    var r=constructor.apply(this,arguments);
+                    if(r!==undefined){
+                        return r;
+                    }
                 };
                 B.extend(subClass,config.extend,true,true);
                 subClass.prototype=new config.extend();
             }
         }else{
             subClass=function(){
-                constructor.apply(this,arguments);
+                var r=constructor.apply(this,arguments);
+                if(r!==undefined){
+                    return r;
+                }
             };
         }
         subClass.prototype.constructor=subClass;
@@ -398,13 +442,28 @@
                     return;
                 }
                 var modules;
+                var handle;
                 if(B.toString.call(arguments[0])=="[object Array]"){
                     modules=arguments[0];
+                    if(length==1){
+                        handle=B.getHandle();
+                    }else{
+                        if(typeof arguments[1]=="function"){
+                            handle=arguments[1];
+                        }else{
+                            handle=B.getHandle();
+                        }
+                    }
                 }else{
-                    modules=Array.prototype.slice.call(arguments,0,-1);
+                    if(typeof arguments[length-1]=="function"){
+                        modules=Array.prototype.slice.call(arguments,0,-1);
+                        handle=arguments[length-1];
+                    }else{
+                        modules=arguments;
+                        handle=B.getHandle();
+                    }
                 }
-                var handle=B.getHandle(arguments[length-1]);
-                B.Loader.loadModules(modules,function(){handle(B.deepclone(B));});
+                B.Loader.loadModules(modules,function(){handle(B.deepclone(B,true));});
             },
             add:function(handle,name,include){
                 name=name.replace(/^(?:Briage\.)?(.*?)(?:\.js)?$/,"Briage.$1.js");
