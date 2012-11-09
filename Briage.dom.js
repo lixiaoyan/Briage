@@ -187,6 +187,9 @@ Briage().add(function(B){
             setAttr:function(name,value){
                 this.$.setAttribute(name,value);
             },
+            removeAttr:function(name){
+                this.$.removeAttribute(name);
+            },
             getId:function(){
                 return this.getAttr("id");
             },
@@ -199,17 +202,43 @@ Briage().add(function(B){
             setStyle:function(name,value){
                 this.getData("style")[name]=value;
             },
-            removeAttr:function(name){
-                this.$.removeAttribute(name);
+            setStyles:function(styles){
+                var self=this;
+                B.each(styles,function(k,v){
+                    self.setStyle(k,v);
+                });
+            },
+            setWidth:function(width){
+                if(width.constructor==Number){
+                    width=width+"px";
+                }
+                this.setStyle("width",width);
+            },
+            setHeight:function(height){
+                if(height.constructor==Number){
+                    height=height+"px";
+                }
+                this.setStyle("height",height)
+            },
+            setSize:function(width,height){
+                this.setWidth(width);
+                this.setHeight(height);
+            },
+            //FIXME: Save the display value for show.
+            hide:function(){
+                this.setStyle("display","none");
+            },
+            show:function(){
+                this.setStyle("display","");
             },
             append:function(child){
                 this.$.appendChild(child.$);
             },
             getHTML:function(){
-                return this.getAttr("innerHTML");
+                return this.getData("innerHTML");
             },
             setHTML:function(html){
-                this.setAttr("innerHTML",html);
+                this.setData("innerHTML",html);
             },
             load:function(url,handle,real,noCache){
                 var self=this;
@@ -258,4 +287,4 @@ Briage().add(function(B){
     });
     B.window=B.DOM.Window.parse(window);
     B.document=B.DOM.Node.parse(document);
-},"dom",["event"]);
+},"dom",[]);

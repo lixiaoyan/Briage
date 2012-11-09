@@ -22,63 +22,64 @@ Briage().add(function(B){
             };
         }
     })();
-    B.Event.bind=function(dom,type,handle){
-        type=getType(type);
-        if(!dom.getCustomData("event")){
-            dom.setCustomData("event",{});
-        }
-        var e=dom.getCustomData("event");
-        if(!e[type]){
-            e[type]=[];
-        }
-        if(!dom.getCustomData("listener")){
-            dom.setCustomData("listener",{});
-        }
-        var l=dom.getCustomData("listener");
-        if(!l[type]){
-            console.log("aa");
-            var listener=function(event){
-                event=B.DOM.Event.parse(event || window.event);
-                var dom=B.DOM.Node.parse(this);
-                B.each(dom.getCustomData("event")[type],function(k,v){
-                    var r=v.call(dom,event);
-                    if(r===false || r===0){
-                        event.returnValue=false;
+    B.extend(B.DOM.DOM.prototype,{
+        bind:function(type,handle){
+            type=getType(type);
+            if(!this.getCustomData("event")){
+                this.setCustomData("event",{});
+            }
+            var e=this.getCustomData("event");
+            if(!e[type]){
+                e[type]=[];
+            }
+            if(!this.getCustomData("listener")){
+                this.setCustomData("listener",{});
+            }
+            var l=this.getCustomData("listener");
+            if(!l[type]){
+                var listener=function(event){
+                    event=B.DOM.Event.parse(event || window.event);
+                    var dom=B.DOM.Node.parse(this);
+                    B.each(dom.getCustomData("event")[type],function(k,v){
+                        var r=v.call(dom,event);
+                        if(r===false || r===0){
+                            event.returnValue=false;
+                        }
+                    });
+                    if(!event.returnValue){
+                        event.preventDefault();
                     }
-                });
-                if(!event.returnValue){
-                    event.preventDefault();
-                }
-                if(event.cancelBubble){
-                    event.stopPropagation();
-                }
-                return event.returnValue;
-            };
-            l[type]=listener;
-            addEventListener(dom.$,type,listener);
+                    if(event.cancelBubble){
+                        event.stopPropagation();
+                    }
+                    return event.returnValue;
+                };
+                l[type]=listener;
+                addEventListener(this.$,type,listener);
+            }
+            e[type].push(handle);
+        },
+        unbind:function(type,handle){
+            type=getType(type);
+            if(this.getCustomData("event") && this.getCustomData("event")[type]){
+                B.array.remove(this.getCustomData("event")[type],handle);
+            }
+        },
+        unbindAll:function(type){
+            type=getType(type);
+            if(this.getCustomData("event")){
+                this.getCustomData("event")[type]=[];
+            }
+        },
+        fire:function(type){
+            type=getType(type);
+            var event=B.DOM.Event.parse({});
+            if(this.getCustomData("listener") && this.getCustomData("listener")[type]){
+                this.getCustomData("listener")[type].call(this,event);
+            }
+            if(!event.cancelBubble && this.getParent && this.getParent()){
+                this.getParent().fire(type);
+            }
         }
-        e[type].push(handle);
-    };
-    B.Event.unbind=function(dom,type,handle){
-        type=getType(type);
-        if(dom.getCustomData("event") && dom.getCustomData("event")[type]){
-            B.array.remove(dom.getCustomData("event")[type],handle);
-        }
-    };
-    B.Event.unbindAll=function(dom,type){
-        type=getType(type);
-        if(dom.getCustomData("event")){
-            dom.getCustomData("event")[type]=[];
-        }
-    };
-    B.Event.fire=function(dom,type){
-        type=getType(type);
-        var event=B.DOM.Event.parse({});
-        if(dom.getCustomData("listener") && dom.getCustomData("listener")[type]){
-            dom.getCustomData("listener")[type].call(dom,event);
-        }
-        if(!event.cancelBubble && dom.getParent && dom.getParent()){
-            dom.getParent().fire(type);
-        }
-    };
+    },true,true);
 },"event",["dom"]);
