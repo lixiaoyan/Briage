@@ -111,7 +111,7 @@
                     }else{
                         subClass=function(){
                             var r=constructor.apply(this,arguments);
-                            if(r!==undefined){
+                            if(r){
                                 return r;
                             }
                         };
@@ -128,7 +128,7 @@
                 }else{
                     subClass=function(){
                         var r=constructor.apply(this,arguments);
-                        if(r!==undefined){
+                        if(r){
                             return r;
                         }
                     };
@@ -137,7 +137,7 @@
                 subClass=function(){
                     config.extend.apply(this,arguments);
                     var r=constructor.apply(this,arguments);
-                    if(r!==undefined){
+                    if(r){
                         return r;
                     }
                 };
