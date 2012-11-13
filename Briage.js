@@ -16,7 +16,7 @@
     };
     B.each=function(object,handle,prototype){
         if(B.toString.call(object)=="[object Array]"){
-            for(var key=0;key<object.length;key++){
+            for(var key=0,len=object.length;key<len;key++){
                 try{
                     handle.call(object[key],key,object[key]);
                 }catch(e){
@@ -225,6 +225,21 @@
         });
         return str;
     };
+    B.String.fill=function(length,fill){
+        length=length || 0;
+        fill=fill || " ";
+        var add=[];
+        for(var i=0;i<length;i++){
+            add.push(fill);
+        }
+        return add.join("");
+    };
+    B.String.leftFill=function(str,length,fill){
+        return B.String.fill(length-str.length,fill)+str;
+    };
+    B.String.rightFill=function(){
+        return str+B.String.fill(length-str.length,fill);
+    };
     B.String.trim=function(str){
         return B.String.trimLeft(B.String.trimRight(str));
     };
@@ -253,6 +268,91 @@
             });
             return r;
         }
+    };
+    B.Color={};
+    B.Color.FLAG_TO_NUM=1<<0;
+    B.Color.FLAG_TO_STR=1<<1;
+    B.Color.FLAG_TO_RGB=1<<2;
+    B.Color.FLAG_TO_HEX=1<<3;
+    B.Color.FLAG_TO_HSL=1<<4;
+    B.Color.convert=function(flag){
+        if(flag & B.Color.FLAG_TO_NUM){
+            var f;
+            var m;
+            var str=arguments[1];
+            if((f=0,m=str.match(/^rgb\((\d+),(\d+),(\d+)\)$/)) || (f=1,m=str.match(/^#(.*?)$/))){
+                if(f==0){
+                    if(flag & B.Color.FLAG_TO_RGB){
+                        var n=parseInt(m[1],16);
+                        var r=(n>>16) & 255;
+                        var g=(n>>8) & 255;
+                        var b=(n) & 255;
+                        return [r,g,b];
+                    }
+                    if(flag & B.Color.FLAG_TO_HEX){
+                        var n=parseInt(m[1],16);
+                        return n;
+                    }
+                }
+                if(f==1){
+                    if(flag & B.Color.FLAG_TO_RGB){
+                        var r=parseInt(m[1]);
+                        var g=parseInt(m[2]);
+                        var b=parseInt(m[3]);
+                        return [r,g,b];
+                    }
+                    if(flag & B.Color.FLAG_TO_HEX){
+                        var r=parseInt(m[1]);
+                        var g=parseInt(m[2]);
+                        var b=parseInt(m[3]);
+                        var n=(r<<16)+(g<<8)+(b);
+                        return n;
+                    }
+                }
+            }
+            if(m=str.match(/^hsl\((\d+),(\d+%?),(\d+%?)\)$/)){
+                if(flag & B.Color.FLAG_TO_HSL){
+                    var h=parseInt(m[1]);
+                    var s=/%$/.test(m[2])?parseInt(m[2].replace(/%$/,""))/100:parseInt(m[2]);
+                    var l=/%$/.test(m[3])?parseInt(m[3].replace(/%$/,""))/100:parseInt(m[3]);
+                    return [h,s,l];
+                }
+            }
+        }
+        if(flag & B.Color.FLAG_TO_STR){
+            if(flag & B.Color.FLAG_TO_RGB){
+                if(arguments.length==2){
+                    var n=arguments[1];
+                    var r=(n>>16) & 255;
+                    var g=(n>>8) & 255;
+                    var b=(n) & 255;
+                    return B.String.format("rgb({0},{1},{2})",r,g,b);
+                }else{
+                    var r=arguments[1];
+                    var g=arguments[2];
+                    var b=arguments[3];
+                    return B.String.format("rgb({0},{1},{2})",r,g,b);
+                }
+            }
+            if(flag & B.Color.FLAG_TO_HEX){
+                if(arguments.length==2){
+                    var n=arguments[1];
+                    return "#"+B.String.leftFill(n.toString(16),6,"0");
+                }else{
+                    var r=arguments[1];
+                    var g=arguments[2];
+                    var b=arguments[3];
+                    return "#"+B.String.leftFill(((r<<16)+(g<<8)+(b)).toString(16),6,"0");
+                }
+            }
+            if(flag & B.Color.FLAG_TO_HSL){
+                var h=arguments[1];
+                var s=arguments[2];
+                var l=arguments[3];
+                return B.String.format("hsl({0},{1},{2})",h,s,l);
+            }
+        }
+        return null;
     };
     (function(B){
         var path="";
