@@ -51,7 +51,7 @@
         B.each(supplier,function(k,v){
             if(overwrite || !(k in receiver)){
                 if(deepclone){
-                    if(B.toString.call(v)=="[object Object]"){
+                    if(B.toString.call(v)=="[object Object]" && !(object.toString && object.toString()=="[object]")){
                         receiver[k]=B.extend({},v,deepclone,overwrite,prototype);
                     }else if(B.toString.call(v)=="[object Array]"){
                         receiver[k]=B.extend([],v,deepclone,overwrite,prototype);
@@ -70,18 +70,17 @@
             return null;
         }
         var clone;
-        if(B.toString.call(object)=="[object Object]" || B.toString.call(object)=="[object Array]"){
+        if((B.toString.call(object)=="[object Object]" && !(object.toString && object.toString()=="[object]")) || B.toString.call(object)=="[object Array]"){
             if(prototype && object.constructor){
                 clone=new object.constructor();
                 B.each(object,function(k,v){
                     clone[k]=B.deepclone(v,prototype);
                 },false);
             }else{
-                if(B.toString.call(object)=="[object Object]"){
-                    clone={};
-                }
                 if(B.toString.call(object)=="[object Array]"){
                     clone=[];
+                }else{
+                    clone={};
                 }
                 B.each(object,function(k,v){
                     clone[k]=B.deepclone(v,prototype);
@@ -485,6 +484,23 @@
             },real,noCache);
         });
     };
+    var loadedStyleSheet={};
+    B.Loader.loadStyleSheet=function(name,url,real,noCache){
+        if(!noCache && loadedStyleSheet[name]){
+            return
+        }
+        var style=document.createElement("link");
+        style.rel="stylesheet";
+        style.type="text/css";
+        style.href=url;
+        document.getElementsByTagName("head")[0].appendChild(style);
+        loadedStyleSheet[name]=true;
+    };
+    B.Loader.loadStyleSheets=function(styleSheets,url,real,noCache){
+        B.each(styleSheets,function(k,v){
+            B.Loader.loadStyleSheet(k,v,real,noCache);
+        });
+    }
     var loadedModules={};
     B.Loader.loadModule=function(name,handle){
         handle=B.getHandle(handle);
@@ -565,12 +581,30 @@
                 }
                 B.Loader.loadModules(modules,function(){handle(B.deepclone(B,true));});
             },
-            add:function(handle,name,include){
+            add:function(handle,name,include,resource){
                 name=name.replace(/^(?:Briage\.)?(.*?)(?:\.js)?$/,"Briage.$1.js");
+                resource=resource || {};
                 this.use(include,function(){
-                    handle(B);
-                    if(loadedModules[name]){
-                        loadedModules[name].onload();
+                    B.Loader.loadScripts(resource.scripts,function(){
+                        handle(B);
+                        if(loadedModules[name]){
+                            loadedModules[name].onload();
+                        }
+                        B.load
+                    });
+                    if(resource.images){
+                        images={};
+                        B.each(resource.images,function(k,v){
+                            images[v]=v;
+                        });
+                        B.Loader.loadImages(images);
+                    }
+                    if(resource.styleSheets){
+                        styleSheets={};
+                        B.each(resource.styleSheets,function(k,v){
+                            styleSheets[v]=v;
+                        });
+                        B.Loader.loadStyleSheets(styleSheets);
                     }
                 });
             }

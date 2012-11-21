@@ -22,6 +22,35 @@ Briage().add(function(B){
             };
         }
     })();
+    B.DOM.Event=new B.Class(function(){},{
+        extend:B.DOM.Object,
+        prototype:{
+            returnValue:true,
+            cancelBubble:false,
+            preventDefault:function(stopPropagation){
+                this.returnValue=false;
+                if(this.$.preventDefault){
+                    this.$.preventDefault();
+                }else{
+                    this.$.returnValue=false;
+                }
+                if(stopPropagation){
+                    this.stopPropagation()
+                }
+            },
+            stopPropagation:function(){
+                this.cancelBubble=true;
+                if(this.$.stopPropagation){
+                    this.$.stopPropagation();
+                }else{
+                    this.$.cancelBubble=true;
+                }
+            },
+            getPagePos:function(){
+                return [this.$.pageX,this.$.pageY];
+            }
+        }
+    });
     B.extend(B.DOM.DOM.prototype,{
         bind:function(type,handle){
             type=getType(type);
@@ -55,14 +84,21 @@ Briage().add(function(B){
                     return event.returnValue;
                 };
                 l[type]=listener;
-                addEventListener(this.$,type,listener);
+                if(type in this.$){
+                    addEventListener(this.$,type,listener);
+                }else{
+                    switch(type){
+                        case "onready":
+                            break;
+                    }
+                }
             }
             e[type].push(handle);
         },
         unbind:function(type,handle){
             type=getType(type);
             if(this.getCustomData("event") && this.getCustomData("event")[type]){
-                B.array.remove(this.getCustomData("event")[type],handle);
+                B.Array.remove(this.getCustomData("event")[type],handle);
             }
         },
         unbindAll:function(type){

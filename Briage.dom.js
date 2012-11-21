@@ -6,21 +6,20 @@ Briage().add(function(B){
     B.DOM.NodeType.TEXT=3;
     B.DOM.NodeType.COMMENT=8;
     B.DOM.Object=new B.Class(function($){
-        if($){
-            this.$=$;
-        }
+        this.$=$;
     },{
         method:{
             parse:function($){
+                var args=Array.prototype.slice.call(arguments,1);
                 if($){
                     if($.$){
                         if($ instanceof this){
                             return $;
                         }else{
-                            return new this($.$);
+                            return new this($.$,args);
                         }
                     }else{
-                        return new this($);
+                        return new this($,args);
                     }
                 }else{
                     return null;
@@ -56,51 +55,54 @@ Briage().add(function(B){
                 this.setData("Briage-data",{});
             },
             equals:function(other){
-                return this.$==other.$;
+                return other && this.$==other.$;
             }
         }
     });
-    B.DOM.Event=new B.Class(function(){},{
+    B.DOM.Selection=new B.Class(function($,document){
+        this.document=B.DOM.Node.parse(document);
+    },{
         extend:B.DOM.Object,
         prototype:{
-            returnValue:true,
-            cancelBubble:false,
-            preventDefault:function(stopPropagation){
-                this.returnValue=false;
-                if(this.$.preventDefault){
-                    this.$.preventDefault();
-                }else{
-                    this.$.returnValue=false;
+            getRangeList:function(){
+                var ranges=[];
+                for(var i=0,len=this.getRangeCount();i<len;i++){
+                    ranges.push(this.getRangeAt(i));
                 }
-                if(stopPropagation){
-                    this.stopPropagation()
-                }
+                return B.DOM.RangeList.parse(ranges,this.document);
             },
-            stopPropagation:function(){
-                this.cancelBubble=true;
-                if(this.$.stopPropagation){
-                    this.$.stopPropagation();
+            getRangeCount:function(){
+                return this.$.rangeCount===undefined?1:this.$.rangeCount;
+            },
+            getRangeAt:function(index){
+                index=index || 0;
+                if(this.$.getRangeAt){
+                    return B.DOM.Range.parse(this.$.getRangeAt(index),this.document);
                 }else{
-                    this.$.cancelBubble=true;
+                    var range=this.document.$.createRange();
+                    range.setStart(this.$.anchorNode,this.$.anchorOffset);
+                    range.setEnd(this.$.focusNode,this.$.focusOffset);
+                    return B.DOM.Range.parse(range,this.document);
                 }
             }
+        }
+    });
+    B.DOM.Range=new B.Class(function($){},{
+        extend:B.DOM.Object,
+        prototype:{
+
+        }
+    });
+    B.DOM.RangeList=new B.Class(function($){},{
+        extend:B.DOM.Object,
+        prototype:{
+
         }
     });
     B.DOM.DOM=new B.Class(function(){},{
         extend:B.DOM.Object,
         prototype:{
-            bind:function(type,handle){
-                B.Event.bind(this,type,handle);
-            },
-            unbind:function(type,handle){
-                B.Event.unbind(this,type,handle);
-            },
-            unbindAll:function(type){
-                B.Event.unbindAll(this,type);
-            },
-            fire:function(type){
-                B.Event.fire(this,type);
-            }
+            
         }
     });
     B.DOM.Window=new B.Class(function(){},{
@@ -111,6 +113,19 @@ Briage().add(function(B){
         prototype:{
             getDocument:function(){
                 return B.DOM.Node.parse(this.$.document);
+            },
+            getViewWidth:function(){
+                return this.getDocument().getBody().getClientWidth() 
+                    || this.getDocument().getDocumentElement().getClientWidth() 
+                    || 0;
+            },
+            getViewHeight:function(){
+                return this.getDocument().getBody().getClientHeight() 
+                    || this.getDocument().getDocumentElement().getClientHeight() 
+                    || 0;
+            },
+            getViewSize:function(){
+                return [this.getViewWidth(),this.getViewHeight()];
             }
         }
     });
@@ -147,7 +162,7 @@ Briage().add(function(B){
         }
     });
     B.DOM.NodeList=new B.Class(function($){
-        if(!(B.toString.call($)=="[object Array]" || $.item)){
+        if(!(B.toString.call($)=="[object Array]" || $.length)){
             $=[$];
         }
         var t=this.$=[];
@@ -224,6 +239,15 @@ Briage().add(function(B){
                 this.setWidth(width);
                 this.setHeight(height);
             },
+            getClientWidth:function(){
+                return this.$.clientWidth;
+            },
+            getClientHeight:function(){
+                return this.$.clientHeight;
+            },
+            getClientSize:function(){
+                return [this.getClientWidth(),this.getClientHeight()];
+            },
             //FIXME: Save the display value for show.
             hide:function(){
                 this.setStyle("display","none");
@@ -247,6 +271,25 @@ Briage().add(function(B){
                     self.setHTML(html);
                     handle();
                 },real,noCache);
+            },
+            getClass:function(){
+                var c=this.getAttr("class");
+                return c?c.split(" "):[];
+            },
+            hasClass:function(name){
+                return B.Array.indexOf(this.getClass(),name)!=-1?true:false;
+            },
+            setClass:function(name){
+                if(typeof name=="string"){
+                    this.setAttr("class",name);
+                }else{
+                    this.setAttr("class",name.join(" "));
+                }
+            },
+            addClass:function(name){
+                var c=this.getClass();
+                c.push(name);
+                this.setClass(c);
             }
         }
     });
@@ -268,8 +311,27 @@ Briage().add(function(B){
             getBody:function(){
                 return B.DOM.Node.parse(this.$.body);
             },
+            getDocumentElement:function(){
+                return B.DOM.Node.parse(this.$.documentElement);
+            },
             getHead:function(){
                 return this.getByTag("head").item(0);
+            },
+            getWindow:function(){
+                return B.DOM.Window.parse(this.$.parentWindow || this.$.defaultView);
+            },
+            getRange:function(){
+                var rangeList=null;
+                if(this.$.getSelection){
+                    var sel=B.DOM.Selection.parse(this.$.getSelection(),this);
+                    rangeList=sel.getRangeList();
+                }else if(this.getWindow().$.getSelection){
+                    var sel=B.DOM.Selection.parse(this.getWindow().$.getSelection(),this);
+                    rangeList=sel.getRangeList();
+                }else if(this.$.selection){
+                    rangeList=B.DOM.RangeList.parse(this.$.selection.createRange(),this);
+                }
+                return rangeList;
             }
         }
     });
