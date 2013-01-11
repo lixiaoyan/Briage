@@ -51,7 +51,7 @@
         B.each(supplier,function(k,v){
             if(overwrite || !(k in receiver)){
                 if(deepclone){
-                    if(B.toString.call(v)=="[object Object]" && !(object.toString && object.toString()=="[object]")){
+                    if(B.toString.call(v)=="[object Object]" && !(v.toString && v.toString()=="[object]")){
                         receiver[k]=B.extend({},v,deepclone,overwrite,prototype);
                     }else if(B.toString.call(v)=="[object Array]"){
                         receiver[k]=B.extend([],v,deepclone,overwrite,prototype);
