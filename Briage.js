@@ -102,7 +102,7 @@
                         subClass=function(){
                             config.extend.constructor.apply(this,arguments);
                             var r=constructor.apply(this,arguments);
-                            if(r!==undefined){
+                            if(r){
                                 return r;
                             }
                         };
@@ -172,7 +172,6 @@
     };
     B.ajax=function(config){
         config=B.extend({
-            xhr:window.XMLHttpRequest?new window.XMLHttpRequest():new window.ActiveXObject("Microsoft.XMLHTTP"),
             type:"GET",
             url:window.location.href,
             data:{},
@@ -181,6 +180,7 @@
             success:function(){},
             error:function(){}
         },config,true,true);
+        config.xhr=config.xhr || window.XMLHttpRequest?new window.XMLHttpRequest():new window.ActiveXObject("Microsoft.XMLHTTP");
         config.type=config.type.toUpperCase();
         config.data=B.param(config.data);
         if(config.data && config.type==="GET"){
