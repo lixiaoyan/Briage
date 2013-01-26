@@ -1,6 +1,6 @@
 Briage().add(function(B){
-    B.DOM={};
-    B.DOM.NodeType={};
+    B.namespace("B.DOM");
+    B.namespace("B.DOM.NodeType");
     B.DOM.NodeType.ELEMENT=1;
     B.DOM.NodeType.DOCUMENT=9;
     B.DOM.NodeType.TEXT=3;
@@ -27,6 +27,9 @@ Briage().add(function(B){
             }
         },
         prototype:{
+            invoke:function(method){
+                return this.getData(method).apply(null,Array.prototype.slice.call(arguments,1));
+            },
             getData:function(name){
                 return this.$[name];
             },
@@ -36,9 +39,8 @@ Briage().add(function(B){
             getCustomData:function(name){
                 if(this.getData("Briage-data")){
                     return this.getData("Briage-data")[name];
-                }else{
-                    return null;
                 }
+                return null;
             },
             setCustomData:function(name,data){
                 if(!this.getData("Briage-data")){
@@ -57,46 +59,6 @@ Briage().add(function(B){
             equals:function(other){
                 return other && this.$==other.$;
             }
-        }
-    });
-    B.DOM.Selection=new B.Class(function($,document){
-        this.document=B.DOM.Node.parse(document);
-    },{
-        extend:B.DOM.Object,
-        prototype:{
-            getRangeList:function(){
-                var ranges=[];
-                for(var i=0,len=this.getRangeCount();i<len;i++){
-                    ranges.push(this.getRangeAt(i));
-                }
-                return B.DOM.RangeList.parse(ranges,this.document);
-            },
-            getRangeCount:function(){
-                return this.$.rangeCount===undefined?1:this.$.rangeCount;
-            },
-            getRangeAt:function(index){
-                index=index || 0;
-                if(this.$.getRangeAt){
-                    return B.DOM.Range.parse(this.$.getRangeAt(index),this.document);
-                }else{
-                    var range=this.document.$.createRange();
-                    range.setStart(this.$.anchorNode,this.$.anchorOffset);
-                    range.setEnd(this.$.focusNode,this.$.focusOffset);
-                    return B.DOM.Range.parse(range,this.document);
-                }
-            }
-        }
-    });
-    B.DOM.Range=new B.Class(function($){},{
-        extend:B.DOM.Object,
-        prototype:{
-
-        }
-    });
-    B.DOM.RangeList=new B.Class(function($){},{
-        extend:B.DOM.Object,
-        prototype:{
-
         }
     });
     B.DOM.DOM=new B.Class(function(){},{
@@ -171,7 +133,7 @@ Briage().add(function(B){
                 var c=B.DOM.Node.parse(v);
                 if(c){
                     t.push(c);
-                } 
+                }
             }
         });
     },{
@@ -215,7 +177,14 @@ Briage().add(function(B){
                 return this.getData("style")[name];
             },
             setStyle:function(name,value){
-                this.getData("style")[name]=value;
+                var style=this.getData("style");
+                if(name=="float"){
+                    style["float"]=value;
+                    style["cssFloat"]=value;
+                    style["styleFloat"]=value;
+                }else{
+                    style[name]=value;
+                }
             },
             setStyles:function(styles){
                 var self=this;
@@ -266,10 +235,11 @@ Briage().add(function(B){
             },
             load:function(url,handle,real,noCache){
                 var self=this;
-                handle=B.getHandle(handle);
                 B.Loader.loadFile(url,url,function(html){
                     self.setHTML(html);
-                    handle();
+                    if(handle){
+                        handle();
+                    }
                 },real,noCache);
             },
             getClass:function(){
@@ -320,18 +290,8 @@ Briage().add(function(B){
             getWindow:function(){
                 return B.DOM.Window.parse(this.$.parentWindow || this.$.defaultView);
             },
-            getRange:function(){
-                var rangeList=null;
-                if(this.$.getSelection){
-                    var sel=B.DOM.Selection.parse(this.$.getSelection(),this);
-                    rangeList=sel.getRangeList();
-                }else if(this.getWindow().$.getSelection){
-                    var sel=B.DOM.Selection.parse(this.getWindow().$.getSelection(),this);
-                    rangeList=sel.getRangeList();
-                }else if(this.$.selection){
-                    rangeList=B.DOM.RangeList.parse(this.$.selection.createRange(),this);
-                }
-                return rangeList;
+            getReadyState:function(){
+                return this.$.readyState;
             }
         }
     });

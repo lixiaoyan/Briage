@@ -1,9 +1,6 @@
 (function(window){
     var B={};
     B.toString=Object.prototype.toString;
-    B.getHandle=function(handle){
-        return handle || function(){};
-    };
     B.assert=function(bool,msg){
         if(!bool){
             B.error(msg);
@@ -14,56 +11,66 @@
     B.error=function(msg){
         throw msg;
     };
-    B.each=function(object,handle,prototype){
-        if(B.toString.call(object)=="[object Array]"){
-            for(var key=0,len=object.length;key<len;key++){
-                try{
-                    handle.call(object[key],key,object[key]);
-                }catch(e){
-                    if(e instanceof B.Break){
-                        break;
-                    }else if(e instanceof B.Continue){
-                        continue;
-                    }else{
-                        B.error(e);
+    B.each=function(object,handle,prototype,ignore){
+        if(object){
+            if(B.toString.call(object)=="[object Array]"){
+                for(var key=0,len=object.length;key<len;key++){
+                    if(!ignore || object[key]!==undefined){
+                        try{
+                            handle.call(object[key],key,object[key]);
+                        }catch(e){
+                            if(e instanceof B.Break){
+                                break;
+                            }else if(e instanceof B.Continue){
+                                continue;
+                            }else{
+                                B.error(e);
+                            }
+                        }
                     }
                 }
-            }
-        }else{
-            for(var key in object){
-                if(prototype || !object.hasOwnProperty || object.hasOwnProperty(key)){
-                    try{
-                        handle.call(object[key],key,object[key]);
-                    }catch(e){
-                        if(e instanceof B.Break){
-                            break;
-                        }else if(e instanceof B.Continue){
-                            continue;
-                        }else{
-                            B.error(e);
+            }else{
+                for(var key in object){
+                    if(prototype || !object.hasOwnProperty || object.hasOwnProperty(key)){
+                        if(!ignore || object[key]!==undefined){
+                            try{
+                                handle.call(object[key],key,object[key]);
+                            }catch(e){
+                                if(e instanceof B.Break){
+                                    break;
+                                }else if(e instanceof B.Continue){
+                                    continue;
+                                }else{
+                                    B.error(e);
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     };
-    B.extend=function(receiver,supplier,deepclone,overwrite,prototype){
-        B.each(supplier,function(k,v){
-            if(overwrite || !(k in receiver)){
-                if(deepclone){
-                    if(B.toString.call(v)=="[object Object]" && !(v.toString && v.toString()=="[object]")){
-                        receiver[k]=B.extend({},v,deepclone,overwrite,prototype);
-                    }else if(B.toString.call(v)=="[object Array]"){
-                        receiver[k]=B.extend([],v,deepclone,overwrite,prototype);
+    B.extend=function(receiver,supplier,deepclone,overwrite,prototype,ignore){
+        if(receiver && supplier){
+            B.each(supplier,function(k,v){
+                if(overwrite || !(k in receiver)){
+                    if(deepclone){
+                        if(B.toString.call(v)=="[object Object]" && !(v.toString && v.toString()=="[object]")){
+                            receiver[k]=B.extend({},v,deepclone,overwrite,prototype,ignore);
+                        }else if(B.toString.call(v)=="[object Array]"){
+                            receiver[k]=B.extend([],v,deepclone,overwrite,prototype,ignore);
+                        }else{
+                            receiver[k]=v;
+                        }
                     }else{
                         receiver[k]=v;
                     }
-                }else{
-                    receiver[k]=v;
                 }
-            }
-        },prototype);
-        return receiver;
+            },prototype,ignore);
+            return receiver;
+        }else{
+            return null;
+        }
     };
     B.deepclone=function(object,prototype){
         if(!object){
@@ -160,6 +167,20 @@
         }
         return subClass;
     };
+    B.namespace=function(namespace,handle){
+        namespace=namespace.replace(/^B\./,"");
+        var names=namespace.split(".");
+        var temp=this;
+        B.each(names,function(){
+            if(!temp[this]){
+                temp[this]={};
+            }
+            temp=temp[this];
+        });
+        if(handle){
+            handle.call(temp);
+        }
+    };
     B.param=function(param){
         if(typeof param=="string"){
             return param;
@@ -213,8 +234,9 @@
         return result;
     };
     B.Array.remove=function(arr,value){
-        if(B.array.indexOf(arr,value)!=-1){
-            arr.splice(B.array.indexOf(arr,value),1);
+        var index;
+        if((index=B.Array.indexOf(arr,value))!=-1){
+            arr.splice(index,1);
         }
     };
     B.String={};
@@ -353,6 +375,12 @@
         }
         return null;
     };
+    B.later=function(timeout,handle,context){
+        var args=Array.prototype.slice.call(arguments,3);
+        setTimeout(function(){
+            handle.apply(context,args);
+        },timeout);
+    };
     (function(B){
         var path="";
         var scripts=document.getElementsByTagName("script");
@@ -371,22 +399,46 @@
     B.Loader.State.FROM_SERVER=1;
     B.Loader.State.HAS_BEEN_LOADED=0;
     B.Loader.State.JUST_LOADED=1;
+    B.Loader.Event=new B.Class(function(name){
+        this._name=name;
+    },{
+        prototype:{
+            _waiting:false,
+            _complete:false,
+            isWaiting:function(){
+                return this._waiting;
+            },
+            wait:function(){
+                this._waiting=true;
+            },
+            end:function(){
+                if(!this._complete){
+                    if(loadedModules[this._name]){
+                        loadedModules[this._name].onload();
+                    }
+                    this._complete=true;
+                }
+            }
+        }
+    });
     var loadedImages={};
     B.Loader.loadImage=function(name,url,handle,real,noCache){
-        handle=B.getHandle(handle);
         if(!noCache && loadedImages[name]){
-            handle.call(loadedImages[name],loadedImages[name],B.Loader.State.FROM_CACHE);
+            if(handle){
+                handle.call(loadedImages[name],loadedImages[name],B.Loader.State.FROM_CACHE);
+            }
         }else{
             var image=new Image();
             image.src=real?url:B.path+url;
             image.onload=function(){
                 loadedImages[name]=image;
-                handle.call(image,image,B.Loader.State.FROM_SERVER)
+                if(handle){
+                    handle.call(image,image,B.Loader.State.FROM_SERVER);
+                }
             }
         }
     };
     B.Loader.loadImages=function(images,handle,real,noCache){
-        handle=B.getHandle(handle);
         var r={};
         var a=0;
         var c=0;
@@ -394,35 +446,41 @@
             a++;
         });
         if(a==0){
-            handle.call(r,r);
+            if(handle){
+                handle.call(r,r);
+            }
         }
         B.each(images,function(k,v){
             B.Loader.loadImage(k,v,function(image){
                 r[k]=image;
                 c++;
                 if(a==c){
-                    handle.call(r,r);
+                    if(handle){
+                        handle.call(r,r);
+                    }
                 }
             },real,noCache);
         });
     };
     var loadedFiles={};
     B.Loader.loadFile=function(name,url,handle,real,noCache){
-        handle=B.getHandle(handle);
         if(!noCache && loadedFiles[name]){
-            handle.call(loadedFiles[name],loadedFiles[name],B.Loader.State.FROM_CACHE);
+            if(handle){
+                handle.call(loadedFiles[name],loadedFiles[name],B.Loader.State.FROM_CACHE);
+            }
         }else{
             B.ajax({
                 url:(real?url:B.path+url),
                 success:function(xhr){
                     loadedFiles[name]=xhr.responseText;
-                    handle.call(xhr.responseText,xhr.responseText,B.Loader.State.FROM_SERVER);
+                    if(handle){
+                        handle.call(xhr.responseText,xhr.responseText,B.Loader.State.FROM_SERVER);
+                    }
                 }
             });
         }
     };
     B.Loader.loadFiles=function(files,handle,real,noCache){
-        handle=B.getHandle(handle);
         var r={};
         var a=0;
         var c=0;
@@ -430,23 +488,28 @@
             a++;
         });
         if(a==0){
-            handle.call(r,r);
+            if(handle){
+                handle.call(r,r);
+            }
         }
         B.each(files,function(k,v){
             B.Loader.loadFile(k,v,function(file){
                 r[k]=file;
                 c++;
                 if(a==c){
-                    handle.call(r,r);
+                    if(handle){
+                        handle.call(r,r);
+                    }
                 }
             },real,noCache);
         });
     };
     var loadedScripts={};
     B.Loader.loadScript=function(name,url,handle,real,noCache){
-        handle=B.getHandle(handle);
         if(!noCache && loadedScripts[name]){
-            handle(B.Loader.State.FROM_CACHE);
+            if(handle){
+                handle(B.Loader.State.FROM_CACHE);
+            }
         }else{
             var script=document.createElement("script");
             script.async=true;
@@ -456,30 +519,37 @@
             script.onreadystatechange=function(){
                 if(script.readyState=="loaded" || script.readyState=="complete"){
                     loadedScripts[name]=true;
-                    handle(B.Loader.State.FROM_SERVER);
+                    if(handle){
+                        handle(B.Loader.State.FROM_SERVER);
+                    }
                 }
             };
             script.onload=function(){
                 loadedScripts[name]=true;
-                handle(B.Loader.State.FROM_SERVER);
+                if(handle){
+                    handle(B.Loader.State.FROM_SERVER);
+                }
             };
         }
     };
     B.Loader.loadScripts=function(scripts,handle,real,noCache){
-        handle=B.getHandle(handle);
         var a=0;
         var c=0;
         B.each(scripts,function(){
             a++;
         });
         if(a==0){
-            handle();
+            if(handle){
+                handle();
+            }
         }
         B.each(scripts,function(k,v){
             B.Loader.loadScript(k,v,function(){
                 c++;
                 if(a==c){
-                    handle();
+                    if(handle){
+                        handle();
+                    }
                 }
             },real,noCache);
         });
@@ -503,10 +573,11 @@
     }
     var loadedModules={};
     B.Loader.loadModule=function(name,handle){
-        handle=B.getHandle(handle);
         name=name.replace(/^(?:Briage\.)?(.*?)(?:\.js)?$/,"Briage.$1.js");
         if(loadedModules[name]){
-            loadedModules[name].handles.push(handle);
+            if(handle){
+                loadedModules[name].handles.push(handle);
+            }
         }else{
             loadedModules[name]={
                 onload:function(){
@@ -517,7 +588,9 @@
                 },
                 handles:[]
             };
-            loadedModules[name].handles.push(handle);
+            if(handle){
+                loadedModules[name].handles.push(handle);
+            }
             B.Loader.loadScript(name,name,function(state){
                 if(state==B.Loader.State.HAS_BEEN_LOADED){
                     loadedModules[name].onload();
@@ -526,30 +599,33 @@
         }
     };
     B.Loader.loadModules=function(modules,handle){
-        handle=B.getHandle(handle);
         var a=0;
         var c=0;
         B.each(modules,function(){
             a++;
         });
         if(a==0){
-            handle();
+            if(handle){
+                handle();
+            }
         }
         B.each(modules,function(k,v){
             B.Loader.loadModule(v,function(){
                 c++;
                 if(a==c){
-                    handle();
+                    if(handle){
+                        handle();
+                    }
                 }
             });
         });
     };
 
-    var Briage=function(){
-        return new Briage.Briage();
-    };
-    Briage.Briage=new B.Class(function(){
-
+    var Briage=new B.Class(function(){
+        if(!(this instanceof Briage)){
+            return new Briage();
+        }
+        return this;
     },{
         prototype:{
             use:function(){
@@ -562,12 +638,12 @@
                 if(B.toString.call(arguments[0])=="[object Array]"){
                     modules=arguments[0];
                     if(length==1){
-                        handle=B.getHandle();
+                        handle=null;
                     }else{
                         if(typeof arguments[1]=="function"){
                             handle=arguments[1];
                         }else{
-                            handle=B.getHandle();
+                            handle=null;
                         }
                     }
                 }else{
@@ -576,31 +652,35 @@
                         handle=arguments[length-1];
                     }else{
                         modules=arguments;
-                        handle=B.getHandle();
+                        handle=null;
                     }
                 }
-                B.Loader.loadModules(modules,function(){handle(B.deepclone(B,true));});
+                B.Loader.loadModules(modules,function(){
+                    if(handle){
+                        handle(B.deepclone(B,true));
+                    }
+                });
             },
             add:function(handle,name,include,resource){
                 name=name.replace(/^(?:Briage\.)?(.*?)(?:\.js)?$/,"Briage.$1.js");
                 resource=resource || {};
                 this.use(include,function(){
                     B.Loader.loadScripts(resource.scripts,function(){
-                        handle(B);
-                        if(loadedModules[name]){
-                            loadedModules[name].onload();
+                        var event=new B.Loader.Event(name);
+                        handle(B,event);
+                        if(!event.isWaiting()){
+                            event.end();
                         }
-                        B.load
                     });
                     if(resource.images){
-                        images={};
+                        var images={};
                         B.each(resource.images,function(k,v){
                             images[v]=v;
                         });
                         B.Loader.loadImages(images);
                     }
                     if(resource.styleSheets){
-                        styleSheets={};
+                        var styleSheets={};
                         B.each(resource.styleSheets,function(k,v){
                             styleSheets[v]=v;
                         });

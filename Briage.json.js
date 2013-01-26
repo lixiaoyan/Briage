@@ -1,5 +1,5 @@
 Briage().add(function(B){
-    B.JSON={};
+    B.namespace("B.JSON");
     if(window.JSON && JSON.parse){
         B.JSON.parse=JSON.parse;
     }else{

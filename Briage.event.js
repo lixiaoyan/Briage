@@ -1,5 +1,4 @@
 Briage().add(function(B){
-    B.Event={};
     var getType=function(type,remove){
         if(remove){
             return /^on/.test(type)?type.replace(/^on/,""):type;
@@ -22,7 +21,9 @@ Briage().add(function(B){
             };
         }
     })();
-    B.DOM.Event=new B.Class(function(){},{
+    B.DOM.Event=new B.Class(function(){
+        this._later=[];
+    },{
         extend:B.DOM.Object,
         prototype:{
             returnValue:true,
@@ -54,6 +55,34 @@ Briage().add(function(B){
     B.extend(B.DOM.DOM.prototype,{
         bind:function(type,handle){
             type=getType(type);
+            switch(type){
+                case "onload":
+                {
+                    if(B.document.getReadyState()=="complete"){
+                        handle.call(this);
+                    }else{
+                        this._bind(type,handle);
+                    }
+                    break;
+                }
+                default:
+                {
+                    this._bind(type,handle);
+                    break;
+                }
+            }
+        },
+        once:function(type,handle){
+            this.bind(type,function(e){
+                handle.call(this,e);
+                var c=arguments.callee;
+                e._later.push(function(){
+                    this.unbind(type,c);
+                });
+            });
+        },
+        _bind:function(type,handle){
+            type=getType(type);
             if(!this.getCustomData("event")){
                 this.setCustomData("event",{});
             }
@@ -74,6 +103,9 @@ Briage().add(function(B){
                         if(r===false || r===0){
                             event.returnValue=false;
                         }
+                    });
+                    B.each(event._later,function(){
+                        this.call(dom);
                     });
                     if(!event.returnValue){
                         event.preventDefault();

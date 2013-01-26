@@ -8,8 +8,36 @@
         <meta name="author" content="Intptr" />
         <title>Briage</title>
         <script type="text/javascript" src="Briage.js"></script>
+        <script type="text/javascript">
+            Briage().use("dom","event",function(B){
+                B.window.bind("load",function(){
+                    var body=B.document.getBody();
+                    var a=B.document.create("div");
+                    a.setStyles({
+                        float:"left",
+                        width:"100px",
+                        height:"100px",
+                        backgroundColor:"#f00"
+                    });
+                    body.append(a);
+                    var b=B.document.create("div");
+                    b.setStyles({
+                        float:"left",
+                        width:"100px",
+                        height:"100px",
+                        backgroundColor:"#00f"
+                    });
+                    body.append(b);
+                    a.bind("click",function(){
+                        b.once("click",function(){
+                            alert("Clicked!");
+                        });
+                    });
+                });
+            });
+        </script>
     </head>
     <body>
-        
+        <div id="main"></div>
     </body>
 </html>

@@ -72,17 +72,18 @@ Briage().add(function(B){
                     count=index;
                     temp=0;
                 };
-                var timer=function(){
+                to(0);
+                var timer=new B.Timer();
+                timer.setInterval(100);
+                timer.setHandle(function(){
                     if(playing){
                         temp++;
                         if(temp>=config.time/100){
                             to(count+1);
                         }
                     }
-                    setTimeout(arguments.callee,100);
-                };
-                to(0);
-                timer();
+                });
+                timer.start();
                 var slide={};
                 slide.change=function(index){
                     to(index-1);
@@ -98,4 +99,4 @@ Briage().add(function(B){
             return this.getCustomData("slide");
         }
     });
-},"slide",["dom","event"]);
+},"slide",["dom","event","timer"]);

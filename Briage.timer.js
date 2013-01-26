@@ -1,15 +1,15 @@
 Briage().add(function(B){
-    B.Timer={};
-    B.Timer.Timer=new B.Class(function(){
+    B.Timer=new B.Class(function(){
         this.handle=null;
         this.data=[];
         this.interval=1000;
+        this.context=null;
     },{
         prototype:{
             timerHandle:-1,
             timerCallback:function(){
-                if(typeof this.handle=="function"){
-                    this.handle.apply(null,this.data);
+                if(this.handle){
+                    this.handle.apply(this.context,this.data);
                 }
                 var self=this;
                 this.timerHandle=setTimeout(function(){self.timerCallback.call(self);},this.interval);
@@ -22,6 +22,12 @@ Briage().add(function(B){
             stop:function(){
                 clearTimeout(this.timerHandle);
                 this.timerHandle=-1;
+            },
+            setContext:function(context){
+                this.context=context;
+            },
+            getContext:function(){
+                return this.context;
             },
             setData:function(){
                 this.data=B.deepclone(arguments);
