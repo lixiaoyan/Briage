@@ -31,8 +31,8 @@
         throw new Error(msg);
     };
     /**
-     * 迭代一个对象。
-     * @param {Object|Array} object    被迭代的对象
+     * 迭代一个对象/数组。
+     * @param {Object|Array} object    被迭代的对象/数组
      * @param {Boolean}      handle    回调函数
      * @param {Boolean}      prototype 是否迭代原型链内的属性
      * @param {Boolean}      ignore    是否忽略值为undefined的属性
@@ -142,15 +142,18 @@
     };
     /**
      * 根据参数生成一个类。
-     * @param {Function} constructor 类的构造函数
-     * @param {Object}   config      类的参数
+     * @class B.Class
+     * @constructor
+     * @param  {Function} constructor 类的构造函数
+     * @param  {Object}   config      类的参数
+     * @return {Function}             生成的类
      * @example
      *     var d=new B.Class(function(){
      *         //构造函数
      *     },{
      *         extend:{
      *             constructor:a, //继承类a的构造函数及静态属性
-     *             prototype:a //继承类b的实例属性
+     *             prototype:b //继承类b的实例属性
      *         },
      *         extend:c, //继承类c的构造函数、静态属性及实例属性
      *         method:{
