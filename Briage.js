@@ -1,16 +1,42 @@
 (function(window){
     var B={};
     B.toString=Object.prototype.toString;
+    /**
+     * 当表达式的值为假时，抛出异常。
+     * @param {Boolean} bool 表达式
+     * @param {String}  msg  异常信息
+     */
     B.assert=function(bool,msg){
         if(!bool){
             B.error(msg);
         }
     };
+    /**
+     * 在B.each中使用以跳出循环。
+     * @class B.Break
+     * @constructor
+     */
     B.Break=function(){};
+    /**
+     * 在B.each中使用以继续循环。
+     * @class B.Continue
+     * @constructor
+     */
     B.Continue=function(){};
+    /**
+     * 抛出异常。
+     * @param  {String} msg 异常信息
+     */
     B.error=function(msg){
-        throw msg;
+        throw new Error(msg);
     };
+    /**
+     * 迭代一个对象。
+     * @param {Object|Array} object    被迭代的对象
+     * @param {Boolean}      handle    回调函数
+     * @param {Boolean}      prototype 是否迭代原型链内的属性
+     * @param {Boolean}      ignore    是否忽略值为undefined的属性
+     */
     B.each=function(object,handle,prototype,ignore){
         if(object){
             if(B.toString.call(object)=="[object Array]"){
@@ -50,6 +76,16 @@
             }
         }
     };
+    /**
+     * 将提供者的属性合并到接受者上。
+     * @param  {Object|Array} receiver  属性的接受者
+     * @param  {Object|Array} supplier  属性的提供者
+     * @param  {Boolean}      deepclone 是否深度拷贝属性
+     * @param  {Boolean}      overwrite 是否覆盖原有属性
+     * @param  {Boolean}      prototype 是否拷贝原型链属性
+     * @param  {Boolean}      ignore    是否忽略值为undefined的属性
+     * @return {Object|Array}           合并得到的对象/数组
+     */
     B.extend=function(receiver,supplier,deepclone,overwrite,prototype,ignore){
         if(receiver && supplier){
             B.each(supplier,function(k,v){
@@ -72,6 +108,12 @@
             return null;
         }
     };
+    /**
+     * 深度拷贝一个对象/数组。
+     * @param  {Object|Array} object    需要深度拷贝的对象
+     * @param  {Boolean}      prototype 是否深度拷贝原型链
+     * @return {Object|Array}           深度拷贝得到的对象/数组
+     */
     B.deepclone=function(object,prototype){
         if(!object){
             return null;
@@ -98,6 +140,27 @@
         }
         return clone;
     };
+    /**
+     * 根据参数生成一个类。
+     * @param {Function} constructor 类的构造函数
+     * @param {Object}   config      类的参数
+     * @example
+     *     var d=new B.Class(function(){
+     *         //构造函数
+     *     },{
+     *         extend:{
+     *             constructor:a, //继承类a的构造函数及静态属性
+     *             prototype:a //继承类b的实例属性
+     *         },
+     *         extend:c, //继承类c的构造函数、静态属性及实例属性
+     *         method:{
+     *             //扩展的静态属性
+     *         },
+     *         prototype:{
+     *             //扩展的实例属性
+     *         }
+     *     });
+     */
     B.Class=function(constructor,config){
         constructor=constructor || function(){};
         config=config || {};
@@ -167,6 +230,16 @@
         }
         return subClass;
     };
+    /**
+     * 生成一个命名空间。
+     * @param  {String}   namespace 命名空间的路径
+     * @param  {Function} handle    回调函数
+     * @example
+     *     B.namespace("B.C.D",function(){
+     *         this.E=12;
+     *     });
+     *     alert(B.C.D.E); //输出12
+     */
     B.namespace=function(namespace,handle){
         namespace=namespace.replace(/^B\./,"");
         var names=namespace.split(".");
@@ -181,6 +254,11 @@
             handle.call(temp);
         }
     };
+    /**
+     * 将对象转换成URL参数。
+     * @param  {Object} param 需要转换的对象
+     * @return {String}       转换得到的字符串
+     */
     B.param=function(param){
         if(typeof param=="string"){
             return param;
@@ -191,6 +269,11 @@
         });
         return arr.join("&");
     };
+    /**
+     * Ajax加载URL。
+     * @param  {[type]} config 配置对象
+     * @return {[type]}        XMLHttpRequest对象
+     */
     B.ajax=function(config){
         config=B.extend({
             type:"GET",
@@ -223,6 +306,12 @@
         return config.xhr;
     };
     B.Array={};
+    /**
+     * 判断一个值在数组中的索引。
+     * @param  {Array}  arr   数组
+     * @param  {Mixed}  value 值
+     * @return {Number}       索引
+     */
     B.Array.indexOf=function(arr,value){
         var result=-1;
         B.each(arr,function(k,v){
@@ -233,6 +322,11 @@
         });
         return result;
     };
+    /**
+     * 删除数组中值为value的项。
+     * @param  {Array} arr   数组
+     * @param  {Mixed} value 值
+     */
     B.Array.remove=function(arr,value){
         var index;
         if((index=B.Array.indexOf(arr,value))!=-1){
@@ -240,12 +334,23 @@
         }
     };
     B.String={};
+    /**
+     * 根据参数格式化字符串。
+     * @param  {String} str 格式字符串
+     * @return {String}     格式化后的字符串
+     */
     B.String.format=function(str){
         B.each(Array.prototype.slice.call(arguments,1),function(k,v){
             str=str.replace(new RegExp("\\{"+k+"\\}","g"),v);
         });
         return str;
     };
+    /**
+     * 将指定长度的字符串填充为指定字符
+     * @param  {Number} length 长度
+     * @param  {String} fill   字符
+     * @return {String}        填充后的字符串
+     */
     B.String.fill=function(length,fill){
         length=length || 0;
         fill=fill || " ";
@@ -255,21 +360,57 @@
         }
         return add.join("");
     };
+    /**
+     * 将给定字符串的左边填充指定字符直到字符串长度为length。
+     * @param  {String} str    原字符串
+     * @param  {Number} length 长度
+     * @param  {String} fill   字符
+     * @return {String}        填充后的字符串
+     */
     B.String.leftFill=function(str,length,fill){
         return B.String.fill(length-str.length,fill)+str;
     };
+    /**
+     * 将给定字符串的右边填充指定字符直到字符串长度为length。
+     * @param  {String} str    原字符串
+     * @param  {Number} length 长度
+     * @param  {String} fill   字符
+     * @return {String}        填充后的字符串
+     */
     B.String.rightFill=function(){
         return str+B.String.fill(length-str.length,fill);
     };
+    /**
+     * 将字符串两端的空白字符删去。
+     * @param  {String} str 原字符串
+     * @return {String}     生成的字符串
+     */
     B.String.trim=function(str){
         return B.String.trimLeft(B.String.trimRight(str));
     };
+    /**
+     * 将字符串左端的空白字符删去。
+     * @param  {String} str 原字符串
+     * @return {String}     生成的字符串
+     */
     B.String.trimLeft=function(str){
         return str.replace(/^\s+/,"");
     };
+    /**
+     * 将字符串右端的空白字符删去。
+     * @param  {String} str 原字符串
+     * @return {String}     生成的字符串
+     */
     B.String.trimRight=function(str){
         return str.replace(/\s+$/,"");
     };
+    /**
+     * 替换字符串。
+     * @param  {String|Array}          arr 原字符串/字符串数组
+     * @param  {String|Array|Function} a   要被替换的字符串/字符串数组/自定义替换方法
+     * @param  {String|Array}          b   要替换为的字符串/字符串数组
+     * @return {String}                    替换得到的字符串
+     */
     B.String.replace=function(arr,a,b){
         if(typeof arr=="string"){
             if(typeof a=="function"){
