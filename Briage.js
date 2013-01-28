@@ -543,28 +543,6 @@
     B.Loader.State.FROM_SERVER=1;
     B.Loader.State.HAS_BEEN_LOADED=0;
     B.Loader.State.JUST_LOADED=1;
-    B.Loader.Event=new B.Class(function(name){
-        this._name=name;
-    },{
-        prototype:{
-            _waiting:false,
-            _complete:false,
-            isWaiting:function(){
-                return this._waiting;
-            },
-            wait:function(){
-                this._waiting=true;
-            },
-            end:function(){
-                if(!this._complete){
-                    if(loadedModules[this._name]){
-                        loadedModules[this._name].onload();
-                    }
-                    this._complete=true;
-                }
-            }
-        }
-    });
     var loadedImages={};
     B.Loader.loadImage=function(name,url,handle,real,noCache){
         if(!noCache && loadedImages[name]){
@@ -810,7 +788,7 @@
                 resource=resource || {};
                 this.use(include,function(){
                     B.Loader.loadScripts(resource.scripts,function(){
-                        var event=new B.Loader.Event(name);
+                        var event=new Briage.Event(name);
                         handle(B,event);
                         if(!event.isWaiting()){
                             event.end();
@@ -831,6 +809,28 @@
                         B.Loader.loadStyleSheets(styleSheets);
                     }
                 });
+            }
+        }
+    });
+    Briage.Event=new B.Class(function(name){
+        this._name=name;
+    },{
+        prototype:{
+            _waiting:false,
+            _complete:false,
+            isWaiting:function(){
+                return this._waiting;
+            },
+            wait:function(){
+                this._waiting=true;
+            },
+            end:function(){
+                if(!this._complete){
+                    if(loadedModules[this._name]){
+                        loadedModules[this._name].onload();
+                    }
+                    this._complete=true;
+                }
             }
         }
     });
