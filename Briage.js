@@ -527,15 +527,23 @@
     };
     (function(B){
         var path="";
+        var min;
+        var match;
         var scripts=document.getElementsByTagName("script");
         B.each(scripts,function(k,v){
             var src=v.src;
-            if(/Briage\.js$/.test(src)){
-                path=src.replace(/Briage\.js$/,"");
+            if(match=src.match(/Briage(\.min)?\.js$/)){
+                path=src.replace(match[0],"");
+                if(match[1]){
+                    min=true;
+                }else{
+                    min=false;
+                }
                 throw new B.Break();
             }
         });
         B.path=path;
+        B.min=min;
     })(B);
     B.Loader={};
     B.Loader.State={};
