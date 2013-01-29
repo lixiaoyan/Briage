@@ -703,7 +703,11 @@
     }
     var loadedModules={};
     B.Loader.loadModule=function(name,handle){
-        name=name.replace(/^(?:Briage\.)?(.*?)(?:\.js)?$/,"Briage.$1.js");
+        if(min){
+            name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.min.js");
+        }else{
+            name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.js");
+        }
         if(loadedModules[name]){
             if(handle){
                 loadedModules[name].handles.push(handle);
@@ -792,7 +796,11 @@
                 });
             },
             add:function(handle,name,include,resource){
-                name=name.replace(/^(?:Briage\.)?(.*?)(?:\.js)?$/,"Briage.$1.js");
+                if(min){
+                    name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.min.js");
+                }else{
+                    name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.js");
+                }
                 resource=resource || {};
                 this.use(include,function(){
                     B.Loader.loadScripts(resource.scripts,function(){
