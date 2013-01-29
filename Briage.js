@@ -703,7 +703,7 @@
     }
     var loadedModules={};
     B.Loader.loadModule=function(name,handle){
-        if(min){
+        if(B.min){
             name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.min.js");
         }else{
             name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.js");
@@ -796,7 +796,7 @@
                 });
             },
             add:function(handle,name,include,resource){
-                if(min){
+                if(B.min){
                     name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.min.js");
                 }else{
                     name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.js");
