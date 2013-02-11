@@ -20,12 +20,12 @@
                 var widget_1=new B.Stage.Rect(50,50,150,150,"#000","#f00",5);
                 stage.addChild(widget_1);
                 widget_1.bind("click",function(event){
-                    console.log("widget 1 click, x: "+event.pos.x+", y:"+event.pos.y);
+                    alert("widget 1 click, x: "+event.pos.x+", y:"+event.pos.y);
                 });
                 var widget_2=new B.Stage.Rect(100,100,150,150,"#00f","#f0f",5);
                 stage.addChild(widget_2);
                 widget_2.bind("click",function(event){
-                    console.log("widget 2 click, x: "+event.pos.x+", y:"+event.pos.y);
+                    alert("widget 2 click, x: "+event.pos.x+", y:"+event.pos.y);
                 });
                 stage.update();
             });
