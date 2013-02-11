@@ -28,7 +28,7 @@ Briage().add(function(B){
         },
         prototype:{
             invoke:function(method){
-                return this.getData(method).apply(null,Array.prototype.slice.call(arguments,1));
+                return this.getData(method).apply(this.$,Array.prototype.slice.call(arguments,1));
             },
             getData:function(name){
                 return this.$[name];
@@ -216,6 +216,37 @@ Briage().add(function(B){
             },
             getClientSize:function(){
                 return [this.getClientWidth(),this.getClientHeight()];
+            },
+            getOffsetLeft:function(){
+                return this.$.offsetLeft;
+            },
+            getOffsetTop:function(){
+                return this.$.offsetTop;
+            },
+            getOffsetPos:function(){
+                return [this.getOffsetLeft(),this.getOffsetTop()];
+            },
+            getOffsetParent:function(){
+                return B.DOM.Node.parse(this.$.offsetParent);
+            },
+            getLeft:function(){
+                var parent=this.getOffsetParent();
+                if(parent){
+                    return this.getOffsetLeft()+parent.getLeft();
+                }else{
+                    return this.getOffsetLeft();
+                }
+            },
+            getTop:function(){
+                var parent=this.getOffsetParent();
+                if(parent){
+                    return this.getOffsetTop()+parent.getTop();
+                }else{
+                    return this.getOffsetTop();
+                }
+            },
+            getPos:function(){
+                return [this.getLeft(),this.getTop()];
             },
             //FIXME: Save the display value for show.
             hide:function(){

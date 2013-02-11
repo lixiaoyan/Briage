@@ -47,8 +47,14 @@ Briage().add(function(B){
                     this.$.cancelBubble=true;
                 }
             },
+            getPageX:function(){
+                return this.$.pageX;
+            },
+            getPageY:function(){
+                return this.$.pageY;
+            },
             getPagePos:function(){
-                return [this.$.pageX,this.$.pageY];
+                return [this.getPageX(),this.getPageY()];
             }
         }
     });

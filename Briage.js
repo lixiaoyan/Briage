@@ -168,6 +168,7 @@
         constructor=constructor || function(){};
         config=config || {};
         var subClass;
+        var superClass=[];
         if(config.extend){
             if(B.toString.call(config.extend)=="[object Object]"){
                 if(config.extend.prototype || config.extend.constructor){
@@ -180,6 +181,7 @@
                             }
                         };
                         B.extend(subClass,config.extend.constructor,true,true);
+                        superClass.push(config.extend.constructor);
                     }else{
                         subClass=function(){
                             var r=constructor.apply(this,arguments);
@@ -196,6 +198,7 @@
                         }else{
                             subClass.prototype=new config.extend.prototype();
                         }
+                        superClass.push(config.extend.prototype);
                     }
                 }else{
                     subClass=function(){
@@ -215,6 +218,7 @@
                 };
                 B.extend(subClass,config.extend,true,true);
                 subClass.prototype=new config.extend();
+                superClass.push(config.extend);
             }
         }else{
             subClass=function(){
@@ -231,6 +235,16 @@
         if(config.prototype){
             B.extend(subClass.prototype,config.prototype,true,true);
         }
+        subClass.superClass=superClass;
+        subClass.prototype.super=function(name){
+            var self=this;
+            var args=Array.prototype.slice.call(arguments,1);
+            B.each(subClass.superClass,function(k,v){
+                if(v.prototype[name]){
+                    v.prototype[name].apply(self,args);
+                }
+            });
+        };
         return subClass;
     };
     /**
