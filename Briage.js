@@ -236,7 +236,7 @@
             B.extend(subClass.prototype,config.prototype,true,true);
         }
         subClass.superClass=superClass;
-        subClass.prototype.super=function(name){
+        subClass.prototype.callSuper=function(name){
             var self=this;
             var args=Array.prototype.slice.call(arguments,1);
             B.each(subClass.superClass,function(k,v){

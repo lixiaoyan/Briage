@@ -27,8 +27,8 @@ Briage().add(function(B){
             }
         },
         prototype:{
-            invoke:function(method){
-                return this.getData(method).apply(this.$,Array.prototype.slice.call(arguments,1));
+            invoke:function(method,a,b,c,d,e,f){
+                return this.$[method](a,b,c,d,e,f);
             },
             getData:function(name){
                 return this.$[name];

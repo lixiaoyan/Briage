@@ -32,23 +32,6 @@ Briage().add(function(B){
         this.x=x;
         this.y=y;
     },{
-        method:{
-            paese:function(){
-                var arg1=arguments[0];
-                var arg2=arguments[1];
-                if(arg1 instanceof B.Stage.Vector){
-                    return arg1.clone();
-                }
-                var s=B.toString.call(arg1);
-                if(s=="[object Array]"){
-                    return new this(arg1[0],arg1[1]);
-                }
-                if(s=="[object Object]"){
-                    return new this(arg1.x,arg1.y);
-                }
-                return new this(arg,arg2);
-            }
-        },
         prototype:{
             x:0,
             y:0,
