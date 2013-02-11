@@ -1,0 +1,36 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+        <meta name="keywords" content="Briage" />
+        <meta name="description" content="Briage" />
+        <meta name="author" content="Intptr" />
+        <title>Briage</title>
+        <script type="text/javascript" src="https://raw.github.com/lixiaoyan/Briage/develop/min/Briage.min.js"></script>
+        <script type="text/javascript">
+            Briage().use("stage",function(B){
+                var canvas=B.document.create("canvas");
+                B.document.getBody().append(canvas);
+                var stage=new B.Stage.Stage(canvas);
+                stage.setSize(500,500);
+                stage.bind("click",function(event){
+                    alert("stage click, x: "+event.pos.x+", y:"+event.pos,y);
+                });
+                var widget_1=new B.Stage.Rect(50,50,150,150,"#000","#f00",5);
+                stage.addChild(widget_1);
+                widget_1.bind("click",function(event){
+                    console.log("widget 1 click, x: "+event.pos.x+", y:"+event.pos,y);
+                });
+                var widget_2=new B.Stage.Rect(100,100,150,150,"#00f","#f0f",5);
+                stage.addChild(widget_2);
+                widget_2.bind("click",function(event){
+                    console.log("widget 2 click, x: "+event.pos.x+", y:"+event.pos,y);
+                });
+                stage.update();
+            });
+        </script>
+    </head>
+    <body>
+    </body>
+</html>
