@@ -1,54 +1,23 @@
 (function(window){
     var B={};
     B.toString=Object.prototype.toString;
-    /**
-     * 当表达式的值为假时，抛出异常。
-     * @param {Boolean} bool 表达式
-     * @param {String}  msg  异常信息
-     */
-    B.assert=function(bool,msg){
-        if(!bool){
-            B.error(msg);
-        }
-    };
-    /**
-     * 在B.each中使用以跳出循环。
-     * @class B.Break
-     * @constructor
-     */
-    B.Break=function(){};
-    /**
-     * 在B.each中使用以继续循环。
-     * @class B.Continue
-     * @constructor
-     */
-    B.Continue=function(){};
-    /**
-     * 抛出异常。
-     * @param  {String} msg 异常信息
-     */
     B.error=function(msg){
-        throw new Error(msg);
+        throw msg;
     };
-    /**
-     * 迭代一个对象/数组。
-     * @param {Object|Array} object    被迭代的对象/数组
-     * @param {Boolean}      handle    回调函数
-     * @param {Boolean}      prototype 是否迭代原型链内的属性
-     * @param {Boolean}      ignore    是否忽略值为undefined的属性
-     */
-    B.each=function(object,handle,prototype,ignore){
+    B.assert=function(bool,msg){
+        !bool && B.error(msg);
+    };
+    B.Break=function(){};
+    B.each=function(object,callback,prototype,ignore){
         if(object){
             if(B.toString.call(object)=="[object Array]"){
                 for(var key=0,len=object.length;key<len;key++){
                     if(!ignore || object[key]!==undefined){
                         try{
-                            handle.call(object[key],key,object[key]);
+                            callback.call(object[key],key,object[key]);
                         }catch(e){
                             if(e instanceof B.Break){
                                 break;
-                            }else if(e instanceof B.Continue){
-                                continue;
                             }else{
                                 B.error(e);
                             }
@@ -60,12 +29,10 @@
                     if(prototype || !object.hasOwnProperty || object.hasOwnProperty(key)){
                         if(!ignore || object[key]!==undefined){
                             try{
-                                handle.call(object[key],key,object[key]);
+                                callback.call(object[key],key,object[key]);
                             }catch(e){
                                 if(e instanceof B.Break){
                                     break;
-                                }else if(e instanceof B.Continue){
-                                    continue;
                                 }else{
                                     B.error(e);
                                 }
@@ -76,21 +43,47 @@
             }
         }
     };
-    /**
-     * 将提供者的属性合并到接受者上。
-     * @param  {Object|Array} receiver  属性的接受者
-     * @param  {Object|Array} supplier  属性的提供者
-     * @param  {Boolean}      deepclone 是否深度拷贝属性
-     * @param  {Boolean}      overwrite 是否覆盖原有属性
-     * @param  {Boolean}      prototype 是否拷贝原型链属性
-     * @param  {Boolean}      ignore    是否忽略值为undefined的属性
-     * @return {Object|Array}           合并得到的对象/数组
-     */
+    B.some=function(object,callback,prototype,ignore){
+        var ret=false;
+        B.each(object,function(key,value){
+            if(callback.call(value,key,value)){
+                ret=true;
+                throw new B.Break();
+            }
+        },prototype,ignore);
+        return ret;
+    };
+    B.any=function(object,callback,prototype,ignore){
+        var ret=true;
+        B.each(object,function(key,value){
+            if(!callback.call(value,key,value)){
+                ret=false;
+                throw new B.Break();
+            }
+        },prototype,ignore);
+        return ret;
+    };
+    B.filter=function(object,callback,prototype,ignore){
+        var obj={};
+        B.each(object,function(key,value){
+            if(callback.call(value,key,value)){
+                obj[key]=value;
+            }
+        },prototype,ignore);
+        return obj;
+    };
+    B.map=function(object,callback,prototype,ignore){
+        var obj={};
+        B.each(object,function(key,value){
+            obj[key]=callback.call(value,key,value);
+        },prototype,ignore);
+        return obj;
+    };
     B.extend=function(receiver,supplier,deepclone,overwrite,prototype,ignore){
         if(receiver && supplier){
             B.each(supplier,function(k,v){
                 if(overwrite || !(k in receiver)){
-                    if(deepclone){
+                    if(deepclone && v){
                         if(B.toString.call(v)=="[object Object]" && !(v.toString && v.toString()=="[object]")){
                             receiver[k]=B.extend({},v,deepclone,overwrite,prototype,ignore);
                         }else if(B.toString.call(v)=="[object Array]"){
@@ -108,12 +101,6 @@
             return null;
         }
     };
-    /**
-     * 深度拷贝一个对象/数组。
-     * @param  {Object|Array} object    需要深度拷贝的对象
-     * @param  {Boolean}      prototype 是否深度拷贝原型链
-     * @return {Object|Array}           深度拷贝得到的对象/数组
-     */
     B.deepclone=function(object,prototype){
         if(!object){
             return null;
@@ -140,130 +127,286 @@
         }
         return clone;
     };
-    /**
-     * 根据参数生成一个类。
-     * @class B.Class
-     * @constructor
-     * @param  {Function} constructor 类的构造函数
-     * @param  {Object}   config      类的参数
-     * @return {Function}             生成的类
-     * @example
-     *     var d=new B.Class(function(){
-     *         //构造函数
-     *     },{
-     *         extend:{
-     *             constructor:a, //继承类a的构造函数及静态属性
-     *             prototype:b //继承类b的实例属性
-     *         },
-     *         extend:c, //继承类c的构造函数、静态属性及实例属性
-     *         method:{
-     *             //扩展的静态属性
-     *         },
-     *         prototype:{
-     *             //扩展的实例属性
-     *         }
-     *     });
-     */
-    B.Class=function(constructor,config){
+    B.proxy=(function(){
+        if(Function.prototype.bind){
+            return function(func,context){
+                return func.bind(context);
+            };
+        }else{
+            return function(func,context){
+                return function(){
+                    return func.apply(context,arguments);
+                }
+            }
+        }
+    })();
+    B.later=function(timeout,callback,context){
+        if(arguments.length<3){
+            context=callback;
+            callback=timeout;
+            timeout=0;
+        }
+        setTimeout(B.proxy(callback,context),timeout);
+    };
+    B.Class=function(constructor,config,method){
         constructor=constructor || function(){};
-        config=config || {};
+        if(arguments.length==2){
+            method=config;
+            config={};
+        }else{
+            config=config || {};
+        }
         var subClass;
         if(config.extend){
-            if(B.toString.call(config.extend)=="[object Object]"){
-                if(config.extend.prototype || config.extend.constructor){
-                    if(config.extend.constructor){
-                        subClass=function(){
-                            config.extend.constructor.apply(this,arguments);
-                            var r=constructor.apply(this,arguments);
-                            if(r){
-                                return r;
-                            }
-                        };
-                        B.extend(subClass,config.extend.constructor,true,true);
-                    }else{
-                        subClass=function(){
-                            var r=constructor.apply(this,arguments);
-                            if(r){
-                                return r;
-                            }
-                        };
-                    }
-                    if(config.extend.prototype){
-                        if(B.toString.call(config.extend.prototype)=="[object Object]"){
-                            var tempClass=function(){};
-                            tempClass.prototype=config.extend.prototype;
-                            subClass.prototype=new tempClass();
-                        }else{
-                            subClass.prototype=new config.extend.prototype();
-                        }
-                    }
-                }else{
-                    subClass=function(){
-                        var r=constructor.apply(this,arguments);
-                        if(r){
-                            return r;
-                        }
-                    };
-                }
-            }else{
-                subClass=function(){
-                    config.extend.apply(this,arguments);
-                    var r=constructor.apply(this,arguments);
-                    if(r){
-                        return r;
-                    }
-                };
-                B.extend(subClass,config.extend,true,true);
-                subClass.prototype=new config.extend();
-            }
-        }else{
             subClass=function(){
-                var r=constructor.apply(this,arguments);
-                if(r!==undefined){
-                    return r;
-                }
+                this._superClass.apply(this,arguments);
+                return constructor.apply(this,arguments);
             };
+            B.extend(subClass,config.extend,false,true);
+            subClass.prototype=new config.extend();
+            subClass.prototype._superClass=config.extend;
+        }else{
+            subClass=constructor;
+            subClass._superClass=Object;
         }
-        subClass.prototype.constructor=subClass;
-        if(config.method){
-            B.extend(subClass,config.method,true,true);
-        }
-        if(config.prototype){
-            B.extend(subClass.prototype,config.prototype,true,true);
-        }
+        subClass.callSuper=function(name){
+            if(this._superClass[name]){
+                this._superClass[name].apply(this,Array.prototype.slice.call(arguments,1));
+            }
+        };
+        subClass.constructor=subClass;
+        B.extend(subClass.prototype,method,true,true);
         return subClass;
     };
-    /**
-     * 生成一个命名空间。
-     * @param  {String}   namespace 命名空间的路径
-     * @param  {Function} handle    回调函数
-     * @example
-     *     B.namespace("B.C.D",function(){
-     *         this.E=12;
-     *     });
-     *     alert(B.C.D.E); //输出12
-     */
-    B.namespace=function(namespace,handle){
+    B.namespace=function(namespace,callback){
         namespace=namespace.replace(/^B\./,"");
         var names=namespace.split(".");
         var temp=this;
-        B.each(names,function(){
-            if(!temp[this]){
-                temp[this]={};
+        B.each(names,function(index,name){
+            if(!temp[name]){
+                temp[name]={};
             }
-            temp=temp[this];
+            temp=temp[name];
         });
-        if(handle){
-            handle.call(temp);
+        if(callback){
+            callback.call(temp);
         }
     };
-    /**
-     * 将对象转换成URL参数。
-     * @param  {Object} param 需要转换的对象
-     * @return {String}       转换得到的字符串
-     */
-    B.param=function(param){
-        if(typeof param=="string"){
+    B.Array={};
+    B.Array.find=(function(){
+        if(Array.prototype.indexOf){
+            return function(arr,value){
+                return arr.indexOf(value);
+            };
+        }else{
+            return function(arr,value){
+                var index=-1;
+                B.some(arr,function(k,v){
+                    if(v===value){
+                        index=k;
+                        return true;
+                    }
+                });
+                return index;
+            };
+        }
+    })();
+    B.Array.remove=function(arr,value){
+        var index;
+        if((index=B.Array.find(arr,value))!=-1){
+            arr.splice(index,1);
+            return true;
+        }
+        return false;
+    };
+    B.Array.contains=function(a,b){
+        if(!b.length){
+            return true;
+        }
+        if(!a.length){
+            return false;
+        }
+        return B.any(b,function(index,value){
+            return B.Array.find(a,value)!=-1;
+        });
+    };
+    B.String={};
+    B.String.format=function(str){
+        B.each(Array.prototype.slice.call(arguments,1),function(k,v){
+            str=str.replace(new RegExp("\\{"+k+"\\}","g"),v);
+        });
+        return str;
+    };
+    B.String.fill=function(length,fill){
+        fill=fill || " ";
+        var add=[];
+        for(var i=0;i<length;i++){
+            add.push(fill);
+        }
+        return add.join("");
+    };
+    B.String.leftFill=function(str,length,fill){
+        return B.String.fill(length-str.length,fill)+str;
+    };
+    B.String.rightFill=function(){
+        return str+B.String.fill(length-str.length,fill);
+    };
+    B.String.trim=(function(){
+        if(String.prototype.trim){
+            return function(str){
+                return str.trim();
+            };
+        }else{
+            return function(str){
+                return B.String.trimLeft(B.String.trimRight(str));
+            };
+        }
+    })();
+    B.String.trimLeft=(function(){
+        if(String.prototype.trimLeft){
+            return function(str){
+                return str.trimLeft();
+            };
+        }else{
+            return function(str){
+                return str.replace(/^\s+/,"");
+            };
+        }
+    })();
+    B.String.trimRight=(function(){
+        if(String.prototype.trimRight){
+            return function(str){
+                return str.trimRight();
+            };
+        }else{
+            return function(str){
+                return str.replace(/\s+$/,"");
+            }
+        }
+    })();
+    B.EventQueue=new B.Class(function(){
+        this._timer=-1;
+        this._queue=[];
+    },{
+        push:function(func,context){
+            this._queue.push(B.proxy(func,context));
+            if(this._timer==-1){
+                this._timer=B.later(function(){
+                    while(!this.isEmpty()){
+                        this.pop()();
+                    }
+                    this._timer=-1;
+                },this);
+            }
+        },
+        pop:function(){
+            return this._queue.shift();
+        },
+        isEmpty:function(){
+            return this._queue.length==0;
+        }
+    });
+    B.MainQueue=new B.EventQueue();
+    B.EventDispatcher=new B.Class(function(){
+        this._listeners={};
+        this._events={};
+    },{
+        on:function(type,handler){
+            if(!this._listeners[type]){
+                this._listeners[type]=function(){
+                    var args=arguments;
+                    B.each(this._events[type],B.proxy(function(index,handler){
+                        handler.apply(this,args);
+                    },this));
+                }
+            }
+            if(!this._events[type]){
+                this._events[type]=[];
+            }
+            this._events[type].push(handler);
+            return this;
+        },
+        off:function(type,handler){
+            if(this._events[type]){
+                B.Array.remove(this._events[type],handler);
+                if(this._events[type].length==0){
+                    delete this._events[type];
+                    delete this._listeners[type];
+                }
+            }
+            return this;
+        },
+        once:function(type,handler){
+            var triggered=false;
+            var proxy=function(){
+                if(!triggered){
+                    handler.apply(this,arguments);
+                    triggered=true;
+                    B.later(function(){
+                        this.off(type,proxy);
+                    },this);
+                }
+            };
+            this.on(type,proxy);
+            return this;
+        },
+        trigger:function(type){
+            var args=Array.prototype.slice.call(arguments,1);
+            B.MainQueue.push(function(){
+                var split=type.split(".");
+                var type_name=split[0];
+                var type_args=split.slice(1);
+                B.each(this._listeners,B.proxy(function(name,func){
+                    var arr=name.split(".");
+                    if(arr[0]==type_name && B.Array.contains(arr.slice(1),type_args)){
+                        func.apply(this,args);
+                    }
+                },this));
+            },this);
+            return this;
+        }
+    });
+    B.Request=new B.Class(function(){
+        var xhr;
+        var self=this;
+        if(window.XMLHttpRequest){
+            xhr=this.$=new XMLHttpRequest();
+        }else{
+            xhr=this.$=new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xhr.onreadystatechange=function(){
+            if(xhr.readyState==4){
+                if((xhr.status>=200 && xhr.status<300) || xhr.status==304 || xhr.status==1223){
+                    self.responseText=xhr.responseText;
+                    self.trigger("success",xhr.responseText,xhr);
+                }else{
+                    self.trigger("failure",xhr);
+                }
+                self.trigger("complete",xhr);
+            }
+        };
+    },{
+        extend:B.EventDispatcher
+    },{
+        responseText:null,
+        open:function(method,url,async,username,password){
+            this.$.open(method,url,async,username,password);
+        },
+        send:function(body){
+            try{
+                this.$.send(body);
+            }catch(e){
+            }
+        },
+        setRequestHeader:function(name,value){
+            this.$.setRequestHeader(name,value);
+        },
+        abort:function(){
+            this.$.abort();
+        }
+    });
+    B.Request.param=function(param){
+        if(param.constructor==String){
             return param;
         }
         var arr=[];
@@ -272,583 +415,251 @@
         });
         return arr.join("&");
     };
-    /**
-     * Ajax加载URL。
-     * @param  {[type]} config 配置对象
-     * @return {[type]}        XMLHttpRequest对象
-     */
-    B.ajax=function(config){
+    B.ajax=B.Request.ajax=function(url,config){
+        var xhr=new B.Request();
         config=B.extend({
             type:"GET",
-            url:window.location.href,
             data:{},
             contentType:"application/x-www-form-urlencoded",
-            async:true,
-            success:function(){},
-            error:function(){}
-        },config,true,true);
-        config.xhr=config.xhr || window.XMLHttpRequest?new window.XMLHttpRequest():new window.ActiveXObject("Microsoft.XMLHTTP");
+            async:true
+        },config || {},true,true);
+        config.data=B.Request.param(config.data);
         config.type=config.type.toUpperCase();
-        config.data=B.param(config.data);
-        if(config.data && config.type==="GET"){
-            config.url+=(/\?/.test(config.url)?"&":"?")+config.data;
+        if(config.data && config.type=="GET"){
+            url+=(/\?/.test(url)?"&":"?")+config.data;
         }
-        config.xhr.open(config.type,config.url,config.async);
-        config.xhr.setRequestHeader("X-Requested-With","XMLHttpRequest");
-        config.xhr.setRequestHeader("Content-Type",config.contentType);
-        config.xhr.send(config.type==="GET"?null:config.data);
-        config.xhr.onreadystatechange=function(){
-            if(config.xhr.readyState==4){
-                if((config.xhr.status>=200 && config.xhr.status<300) || config.xhr.status==304 || config.xhr.status==1223){
-                    config.success.call(config.xhr,config.xhr);
-                }else{
-                    config.error.call(config.xhr,config.xhr);
-                }
-            }
-        };
-        return config.xhr;
+        xhr.open(config.type,url,config.async);
+        xhr.setRequestHeader("X-Requested-With","XMLHttpRequest");
+        xhr.setRequestHeader("Content-Type",config.contentType);
+        xhr.send(config.type=="GET"?null:config.data);
+        return xhr;
     };
-    B.Array={};
-    /**
-     * 判断一个值在数组中的索引。
-     * @param  {Array}  arr   数组
-     * @param  {Mixed}  value 值
-     * @return {Number}       索引
-     */
-    B.Array.indexOf=function(arr,value){
-        var result=-1;
-        B.each(arr,function(k,v){
-            if(v===value){
-                result=k;
-                throw new B.Break();
+    var _Briage=new (new B.Class(function(){
+        this.on("end",function(){
+            if(this.queue.length && !this.queue[0].length){
+                this.queue.splice(0,1);
+                if(this.queue.length){
+                    if(this.queue[0].length){
+                        B.each(this.queue[0],B.proxy(function(index,func){
+                            func.call(this);
+                        },this));
+                    }else{
+                        this.trigger("end");
+                    }
+                }
+                if(this.queue.length<2){
+                    this.waiting=false;
+                }
             }
         });
-        return result;
-    };
-    /**
-     * 删除数组中值为value的项。
-     * @param  {Array} arr   数组
-     * @param  {Mixed} value 值
-     */
-    B.Array.remove=function(arr,value){
-        var index;
-        if((index=B.Array.indexOf(arr,value))!=-1){
-            arr.splice(index,1);
-        }
-    };
-    B.String={};
-    /**
-     * 根据参数格式化字符串。
-     * @param  {String} str 格式字符串
-     * @return {String}     格式化后的字符串
-     */
-    B.String.format=function(str){
-        B.each(Array.prototype.slice.call(arguments,1),function(k,v){
-            str=str.replace(new RegExp("\\{"+k+"\\}","g"),v);
-        });
-        return str;
-    };
-    /**
-     * 将指定长度的字符串填充为指定字符
-     * @param  {Number} length 长度
-     * @param  {String} fill   字符
-     * @return {String}        填充后的字符串
-     */
-    B.String.fill=function(length,fill){
-        length=length || 0;
-        fill=fill || " ";
-        var add=[];
-        for(var i=0;i<length;i++){
-            add.push(fill);
-        }
-        return add.join("");
-    };
-    /**
-     * 将给定字符串的左边填充指定字符直到字符串长度为length。
-     * @param  {String} str    原字符串
-     * @param  {Number} length 长度
-     * @param  {String} fill   字符
-     * @return {String}        填充后的字符串
-     */
-    B.String.leftFill=function(str,length,fill){
-        return B.String.fill(length-str.length,fill)+str;
-    };
-    /**
-     * 将给定字符串的右边填充指定字符直到字符串长度为length。
-     * @param  {String} str    原字符串
-     * @param  {Number} length 长度
-     * @param  {String} fill   字符
-     * @return {String}        填充后的字符串
-     */
-    B.String.rightFill=function(){
-        return str+B.String.fill(length-str.length,fill);
-    };
-    /**
-     * 将字符串两端的空白字符删去。
-     * @param  {String} str 原字符串
-     * @return {String}     生成的字符串
-     */
-    B.String.trim=function(str){
-        return B.String.trimLeft(B.String.trimRight(str));
-    };
-    /**
-     * 将字符串左端的空白字符删去。
-     * @param  {String} str 原字符串
-     * @return {String}     生成的字符串
-     */
-    B.String.trimLeft=function(str){
-        return str.replace(/^\s+/,"");
-    };
-    /**
-     * 将字符串右端的空白字符删去。
-     * @param  {String} str 原字符串
-     * @return {String}     生成的字符串
-     */
-    B.String.trimRight=function(str){
-        return str.replace(/\s+$/,"");
-    };
-    /**
-     * 替换字符串。
-     * @param  {String|Array}          arr 原字符串/字符串数组
-     * @param  {String|Array|Function} a   要被替换的字符串/字符串数组/自定义替换方法
-     * @param  {String|Array}          b   要替换为的字符串/字符串数组
-     * @return {String}                    替换得到的字符串
-     */
-    B.String.replace=function(arr,a,b){
-        if(typeof arr=="string"){
-            if(typeof a=="function"){
-                return a.call(arr);
-            }else{
-                return String.prototype.replace.call(arr,a,b);
-            }
-        }else{
-            var r;
-            if(B.toString.call(arr)=="[object Array]"){
-                r=[];
-            }else{
-                r={};
-            }
-            B.each(arr,function(k,v){
-                r[k]=B.String.replace(v,a,b);
-            });
-            return r;
-        }
-    };
-    B.Color={};
-    B.Color.FLAG_TO_NUM=1<<0;
-    B.Color.FLAG_TO_STR=1<<1;
-    B.Color.FLAG_TO_RGB=1<<2;
-    B.Color.FLAG_TO_HEX=1<<3;
-    B.Color.FLAG_TO_HSL=1<<4;
-    B.Color.convert=function(flag){
-        if(flag & B.Color.FLAG_TO_NUM){
-            var f;
-            var m;
-            var str=arguments[1];
-            if((f=0,m=str.match(/^rgb\((\d+),(\d+),(\d+)\)$/)) || (f=1,m=str.match(/^#(.*?)$/))){
-                if(f==0){
-                    if(flag & B.Color.FLAG_TO_RGB){
-                        var n=parseInt(m[1],16);
-                        var r=(n>>16) & 255;
-                        var g=(n>>8) & 255;
-                        var b=(n) & 255;
-                        return [r,g,b];
+    },{
+        extend:B.EventDispatcher
+    },{
+        defaultConfig:(function(B,doc){
+            var path="";
+            var min=false;
+            var scripts=doc.getElementsByTagName("script");
+            B.some(scripts,function(index,dom){
+                var src=dom.src;
+                var match;
+                if(match=/Briage(\.min)?\.js$/.exec(src)){
+                    path=src.replace(match[0],"");
+                    if(match[1]){
+                        min=true;
                     }
-                    if(flag & B.Color.FLAG_TO_HEX){
-                        var n=parseInt(m[1],16);
-                        return n;
-                    }
-                }
-                if(f==1){
-                    if(flag & B.Color.FLAG_TO_RGB){
-                        var r=parseInt(m[1]);
-                        var g=parseInt(m[2]);
-                        var b=parseInt(m[3]);
-                        return [r,g,b];
-                    }
-                    if(flag & B.Color.FLAG_TO_HEX){
-                        var r=parseInt(m[1]);
-                        var g=parseInt(m[2]);
-                        var b=parseInt(m[3]);
-                        var n=(r<<16)+(g<<8)+(b);
-                        return n;
-                    }
-                }
-            }
-            if(m=str.match(/^hsl\((\d+),(\d+%?),(\d+%?)\)$/)){
-                if(flag & B.Color.FLAG_TO_HSL){
-                    var h=parseInt(m[1]);
-                    var s=/%$/.test(m[2])?parseInt(m[2].replace(/%$/,""))/100:parseInt(m[2]);
-                    var l=/%$/.test(m[3])?parseInt(m[3].replace(/%$/,""))/100:parseInt(m[3]);
-                    return [h,s,l];
-                }
-            }
-        }
-        if(flag & B.Color.FLAG_TO_STR){
-            if(flag & B.Color.FLAG_TO_RGB){
-                if(arguments.length==2){
-                    var n=arguments[1];
-                    var r=(n>>16) & 255;
-                    var g=(n>>8) & 255;
-                    var b=(n) & 255;
-                    return B.String.format("rgb({0},{1},{2})",r,g,b);
-                }else{
-                    var r=arguments[1];
-                    var g=arguments[2];
-                    var b=arguments[3];
-                    return B.String.format("rgb({0},{1},{2})",r,g,b);
-                }
-            }
-            if(flag & B.Color.FLAG_TO_HEX){
-                if(arguments.length==2){
-                    var n=arguments[1];
-                    return "#"+B.String.leftFill(n.toString(16),6,"0");
-                }else{
-                    var r=arguments[1];
-                    var g=arguments[2];
-                    var b=arguments[3];
-                    return "#"+B.String.leftFill(((r<<16)+(g<<8)+(b)).toString(16),6,"0");
-                }
-            }
-            if(flag & B.Color.FLAG_TO_HSL){
-                var h=arguments[1];
-                var s=arguments[2];
-                var l=arguments[3];
-                return B.String.format("hsl({0},{1},{2})",h,s,l);
-            }
-        }
-        return null;
-    };
-    B.later=function(timeout,handle,context){
-        var args=Array.prototype.slice.call(arguments,3);
-        setTimeout(function(){
-            handle.apply(context,args);
-        },timeout);
-    };
-    (function(B){
-        var path="";
-        var min;
-        var match;
-        var scripts=document.getElementsByTagName("script");
-        B.each(scripts,function(k,v){
-            var src=v.src;
-            if(match=src.match(/Briage(\.min)?\.js$/)){
-                path=src.replace(match[0],"");
-                if(match[1]){
-                    min=true;
-                }else{
-                    min=false;
-                }
-                throw new B.Break();
-            }
-        });
-        B.path=path;
-        B.min=min;
-    })(B);
-    B.Loader={};
-    B.Loader.State={};
-    B.Loader.State.FROM_CACHE=0;
-    B.Loader.State.FROM_SERVER=1;
-    B.Loader.State.HAS_BEEN_LOADED=0;
-    B.Loader.State.JUST_LOADED=1;
-    var loadedImages={};
-    B.Loader.loadImage=function(name,url,handle,real,noCache){
-        if(!noCache && loadedImages[name]){
-            if(handle){
-                handle.call(loadedImages[name],loadedImages[name],B.Loader.State.FROM_CACHE);
-            }
-        }else{
-            var image=new Image();
-            image.src=real?url:B.path+url;
-            image.onload=function(){
-                loadedImages[name]=image;
-                if(handle){
-                    handle.call(image,image,B.Loader.State.FROM_SERVER);
-                }
-            }
-        }
-    };
-    B.Loader.loadImages=function(images,handle,real,noCache){
-        var r={};
-        var a=0;
-        var c=0;
-        B.each(images,function(){
-            a++;
-        });
-        if(a==0){
-            if(handle){
-                handle.call(r,r);
-            }
-        }
-        B.each(images,function(k,v){
-            B.Loader.loadImage(k,v,function(image){
-                r[k]=image;
-                c++;
-                if(a==c){
-                    if(handle){
-                        handle.call(r,r);
-                    }
-                }
-            },real,noCache);
-        });
-    };
-    var loadedFiles={};
-    B.Loader.loadFile=function(name,url,handle,real,noCache){
-        if(!noCache && loadedFiles[name]){
-            if(handle){
-                handle.call(loadedFiles[name],loadedFiles[name],B.Loader.State.FROM_CACHE);
-            }
-        }else{
-            B.ajax({
-                url:(real?url:B.path+url),
-                success:function(xhr){
-                    loadedFiles[name]=xhr.responseText;
-                    if(handle){
-                        handle.call(xhr.responseText,xhr.responseText,B.Loader.State.FROM_SERVER);
-                    }
+                    return true;
                 }
             });
-        }
-    };
-    B.Loader.loadFiles=function(files,handle,real,noCache){
-        var r={};
-        var a=0;
-        var c=0;
-        B.each(files,function(){
-            a++;
-        });
-        if(a==0){
-            if(handle){
-                handle.call(r,r);
-            }
-        }
-        B.each(files,function(k,v){
-            B.Loader.loadFile(k,v,function(file){
-                r[k]=file;
-                c++;
-                if(a==c){
-                    if(handle){
-                        handle.call(r,r);
-                    }
-                }
-            },real,noCache);
-        });
-    };
-    var loadedScripts={};
-    B.Loader.loadScript=function(name,url,handle,real,noCache){
-        if(!noCache && loadedScripts[name]){
-            if(handle){
-                handle(B.Loader.State.FROM_CACHE);
-            }
-        }else{
-            var script=document.createElement("script");
-            script.async=true;
-            script.type="text/javascript";
-            script.src=real?url:B.path+url;
-            document.getElementsByTagName("head")[0].appendChild(script);
-            script.onreadystatechange=function(){
-                if(script.readyState=="loaded" || script.readyState=="complete"){
-                    loadedScripts[name]=true;
-                    if(handle){
-                        handle(B.Loader.State.FROM_SERVER);
-                    }
-                }
+            return {
+                path:path,
+                min:min
             };
-            script.onload=function(){
-                loadedScripts[name]=true;
-                if(handle){
-                    handle(B.Loader.State.FROM_SERVER);
-                }
-            };
-        }
-    };
-    B.Loader.loadScripts=function(scripts,handle,real,noCache){
-        var a=0;
-        var c=0;
-        B.each(scripts,function(){
-            a++;
-        });
-        if(a==0){
-            if(handle){
-                handle();
+        })(B,document),
+        config:null,
+        queue:[],
+        waiting:false,
+        loaded:{},
+        enqueue:function(func){
+            if(!this.queue.length){
+                this.queue.push([]);
             }
-        }
-        B.each(scripts,function(k,v){
-            B.Loader.loadScript(k,v,function(){
-                c++;
-                if(a==c){
-                    if(handle){
-                        handle();
+            this.queue[this.queue.length-1].push(func);
+        },
+        remove:function(func){
+            B.some(this.queue,function(index,list){
+                return B.Array.remove(list,func);
+            });
+        },
+        exec:function(func){
+            this.enqueue(func);
+            if(!this.waiting){
+                func.call(this);
+            }
+        },
+        use:function(){
+            var length=arguments.length;
+            if(!length){
+                return;
+            }
+            var handler,modules;
+            if(typeof arguments[length-1]=="function"){
+                handler=arguments[length-1];
+                modules=Array.prototype.slice.call(arguments,0,-1);
+            }else{
+                handler=null;
+                modules=Array.prototype.slice.call(arguments,0);
+            }
+            this.exec(function(){
+                var func=arguments.callee;
+                this.loadModules(modules,function(){
+                    if(handler){
+                        B.MainQueue.push(function(){
+                            handler.call(B,B);
+                        });
                     }
+                    this.remove(func);
+                    this.trigger("end");
+                },function(){
+                    this.remove(func);
+                    this.trigger("end");
+                });
+            });
+            return this;
+        },
+        add:function(handler,name,include){
+            var config=_Briage.defaultConfig || _Briage.config;
+            if(config.min){
+                name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.min.js");
+            }else{
+                name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.js");
+            }
+            var self=this;
+            this.loadModules(include,function(){
+                var event=new _Briage.Event(name);
+                try{
+                    handler.call(B,B,event);
+                    if(!event.waiting){
+                        event.end();
+                    }
+                }catch(e){
+                    self.trigger("failed."+name);
                 }
-            },real,noCache);
-        });
-    };
-    var loadedStyleSheet={};
-    B.Loader.loadStyleSheet=function(name,url,real,noCache){
-        if(!noCache && loadedStyleSheet[name]){
-            return
+            },function(){
+                self.trigger("failed."+name);
+            });
+            return this;
+        },
+        loadModules:function(modules,success,failure){
+            if(modules && modules.length){
+                var all=modules.length;
+                var count=0;
+                var self=this;
+                B.each(modules,function(index,name){
+                    self.loadModule(name,function(){
+                        count++;
+                        if(count==all){
+                            success.call(this);
+                        }
+                    },function(){
+                        failure.call(this);
+                    });
+                });
+            }else{
+                success.call(this);
+            }
+        },
+        loadModule:function(name,success,failure){
+            var self=this;
+            new _Briage.Loader(name).on("success",function(){
+                success.call(self);
+            }).on("failure",function(){
+                failure.call(self);
+            });
+        },
+        setConfig:function(config){
+            this.exec(function(){
+                if(config){
+                    this.config=B.extend(B.extend({},this.defaultConfig,true,true),config,true,true);
+                }else{
+                    this.config=null;
+                }
+                this.remove(arguments.callee);
+                this.trigger("end");
+            });
+            return this;
+        },
+        wait:function(){
+            if(this.queue.length && this.queue[this.queue.length-1].length){
+                this.waiting=true;
+                this.queue.push([]);
+            }
+            return this;
+        },
+        get:function(){
+            return B;
         }
-        var style=document.createElement("link");
-        style.rel="stylesheet";
-        style.type="text/css";
-        style.href=url;
-        document.getElementsByTagName("head")[0].appendChild(style);
-        loadedStyleSheet[name]=true;
-    };
-    B.Loader.loadStyleSheets=function(styleSheets,url,real,noCache){
-        B.each(styleSheets,function(k,v){
-            B.Loader.loadStyleSheet(k,v,real,noCache);
-        });
-    }
-    var loadedModules={};
-    B.Loader.loadModule=function(name,handle){
-        if(B.min){
+    }));
+    _Briage.Event=new B.Class(function(name){
+        this.name=name;
+    },{
+        complete:false,
+        waiting:false,
+        wait:function(){
+            this.waiting=true;
+        },
+        end:function(){
+            _Briage.trigger("finished."+this.name);
+        }
+    });
+    _Briage.Loader=new B.Class(function(name){
+        var config=_Briage.defaultConfig || _Briage.config;
+        if(config.min){
             name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.min.js");
         }else{
             name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.js");
         }
-        if(loadedModules[name]){
-            if(handle){
-                loadedModules[name].handles.push(handle);
-            }
+        var self=this;
+        if(_Briage.loaded[name]==4){
+            this.trigger("success");
+        }else if(_Briage.loaded[name]==0 || _Briage.loaded[name]==undefined){
+            var path=config.path+name;
+            _Briage.loaded[name]=1;
+            B.ajax(path).on("success",function(text){
+                _Briage.loaded[name]=2;
+                B.later(function(){
+                    _Briage.loaded[name]=3;
+                    _Briage.once("finished."+name,function(){
+                        _Briage.loaded[name]=4;
+                        self.trigger("success");
+                    }).once("failed."+name,function(){
+                        self.trigger("failure");
+                    });
+                    try{
+                        window.eval(text);
+                    }catch(e){
+                        self.trigger("failure");
+                        B.error(e);
+                    }
+                });
+            }).on("failure",function(){
+                self.trigger("failure");
+            });
         }else{
-            loadedModules[name]={
-                onload:function(){
-                    B.each(loadedModules[name].handles,function(k,v){
-                        v();
-                    });
-                    delete loadedModules[name];
-                },
-                handles:[]
-            };
-            if(handle){
-                loadedModules[name].handles.push(handle);
-            }
-            B.Loader.loadScript(name,name,function(state){
-                if(state==B.Loader.State.HAS_BEEN_LOADED){
-                    loadedModules[name].onload();
-                }
+            _Briage.once("finished."+name,function(){
+                _Briage.loaded[name]=4;
+                self.trigger("success");
+            }).once("failed."+name,function(){
+                self.trigger("failure");
             });
         }
-    };
-    B.Loader.loadModules=function(modules,handle){
-        var a=0;
-        var c=0;
-        B.each(modules,function(){
-            a++;
-        });
-        if(a==0){
-            if(handle){
-                handle();
-            }
-        }
-        B.each(modules,function(k,v){
-            B.Loader.loadModule(v,function(){
-                c++;
-                if(a==c){
-                    if(handle){
-                        handle();
-                    }
-                }
-            });
-        });
-    };
-
-    var Briage=new B.Class(function(){
-        if(!(this instanceof Briage)){
-            return new Briage();
-        }
-        return this;
     },{
-        prototype:{
-            use:function(){
-                var length=arguments.length;
-                if(!length){
-                    return;
-                }
-                var modules;
-                var handle;
-                if(B.toString.call(arguments[0])=="[object Array]"){
-                    modules=arguments[0];
-                    if(length==1){
-                        handle=null;
-                    }else{
-                        if(typeof arguments[1]=="function"){
-                            handle=arguments[1];
-                        }else{
-                            handle=null;
-                        }
-                    }
-                }else{
-                    if(typeof arguments[length-1]=="function"){
-                        modules=Array.prototype.slice.call(arguments,0,-1);
-                        handle=arguments[length-1];
-                    }else{
-                        modules=arguments;
-                        handle=null;
-                    }
-                }
-                B.Loader.loadModules(modules,function(){
-                    if(handle){
-                        handle(B.deepclone(B,true));
-                    }
-                });
-            },
-            add:function(handle,name,include,resource){
-                if(B.min){
-                    name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.min.js");
-                }else{
-                    name=name.replace(/^(?:Briage\.)?(.*?)(?:\.min)?(?:\.js)?$/,"Briage.$1.js");
-                }
-                resource=resource || {};
-                this.use(include,function(){
-                    B.Loader.loadScripts(resource.scripts,function(){
-                        var event=new Briage.Event(name);
-                        handle(B,event);
-                        if(!event.isWaiting()){
-                            event.end();
-                        }
-                    });
-                    if(resource.images){
-                        var images={};
-                        B.each(resource.images,function(k,v){
-                            images[v]=v;
-                        });
-                        B.Loader.loadImages(images);
-                    }
-                    if(resource.styleSheets){
-                        var styleSheets={};
-                        B.each(resource.styleSheets,function(k,v){
-                            styleSheets[v]=v;
-                        });
-                        B.Loader.loadStyleSheets(styleSheets);
-                    }
-                });
-            }
+        extend:B.EventDispatcher
+    },{});
+    var Briage=function(config){
+        if(config){
+            _Briage.setConfig(config);
         }
-    });
-    Briage.Event=new B.Class(function(name){
-        this._name=name;
-    },{
-        prototype:{
-            _waiting:false,
-            _complete:false,
-            isWaiting:function(){
-                return this._waiting;
-            },
-            wait:function(){
-                this._waiting=true;
-            },
-            end:function(){
-                if(!this._complete){
-                    if(loadedModules[this._name]){
-                        loadedModules[this._name].onload();
-                    }
-                    this._complete=true;
-                }
-            }
-        }
-    });
+        return _Briage;
+    };
     window.Briage=Briage;
 })(window);
