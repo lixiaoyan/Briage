@@ -146,7 +146,7 @@
             callback=timeout;
             timeout=0;
         }
-        setTimeout(B.proxy(callback,context),timeout);
+        return setTimeout(B.proxy(callback,context),timeout);
     };
     B.Class=function(constructor,config,method){
         constructor=constructor || function(){};
@@ -608,6 +608,7 @@
             this.waiting=true;
         },
         end:function(){
+            _Briage.loaded[this.name]=4;
             _Briage.trigger("finished."+this.name);
         }
     });
