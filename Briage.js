@@ -499,7 +499,7 @@
         use:function(){
             var length=arguments.length;
             if(!length){
-                return;
+                return this;
             }
             var handler,modules;
             if(typeof arguments[length-1]=="function"){
