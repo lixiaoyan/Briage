@@ -315,7 +315,7 @@
             if(!this._listeners[type]){
                 this._listeners[type]=function(){
                     var args=arguments;
-                    B.each(this._events[type],B.proxy(function(index,handler){
+                    B.each(this._events[type].slice(0),B.proxy(function(index,handler){
                         handler.apply(this,args);
                     },this));
                 }
@@ -328,8 +328,13 @@
         },
         off:function(type,handler){
             if(this._events[type]){
-                B.Array.remove(this._events[type],handler);
-                if(this._events[type].length==0){
+                if(handler){
+                    B.Array.remove(this._events[type],handler);
+                    if(this._events[type].length==0){
+                        delete this._events[type];
+                        delete this._listeners[type];
+                    }
+                }else{
                     delete this._events[type];
                     delete this._listeners[type];
                 }
